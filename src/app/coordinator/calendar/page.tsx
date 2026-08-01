@@ -1,21 +1,24 @@
-import { CalendarDays } from "lucide-react";
+import { CoordinatorCalendar } from "@/components/coordinator/coordinator-calendar";
+import { dateKeyInSingapore } from "@/lib/events/calendar";
+import { listCoordinatorCalendarEvents } from "@/server/events/calendar";
 
-import { Card, CardContent } from "@/components/ui/card";
+export default async function CoordinatorCalendarPage() {
+  const { events, error } = await listCoordinatorCalendarEvents();
 
-export default function CoordinatorCalendarPage() {
   return (
-    <div className="mx-auto max-w-7xl">
-      <h1 className="text-3xl font-bold tracking-tight">Upcoming calendar</h1>
-      <p className="mt-2 text-muted-foreground">Month, week, and day views will be connected to Supabase events.</p>
-      <Card className="mt-8 border-0">
-        <CardContent className="grid min-h-[420px] place-items-center p-10 text-center">
-          <div>
-            <CalendarDays className="mx-auto size-12 text-primary" />
-            <h2 className="mt-5 text-xl font-bold">Calendar scaffold ready</h2>
-            <p className="mt-2 max-w-md text-muted-foreground">Event filters and readiness indicators are the next implementation slice.</p>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="mx-auto max-w-7xl space-y-6">
+      <div>
+        <p className="text-sm font-semibold text-primary">Coordinator event pipeline</p>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight">Calendar</h1>
+        <p className="mt-2 text-muted-foreground">Plan delivery dates and spot events that still need attention.</p>
+      </div>
+      {error ? (
+        <p className="rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive" role="alert">
+          Calendar events could not be loaded: {error}
+        </p>
+      ) : (
+        <CoordinatorCalendar events={events} todayKey={dateKeyInSingapore(new Date())} />
+      )}
     </div>
   );
 }
