@@ -49,7 +49,40 @@ const legendDots = {
   upcoming: "bg-emerald-600",
   awaiting_closure: "bg-violet-500",
   archived: "bg-slate-600",
+  registered: "bg-sky-500",
+  confirmed: "bg-emerald-600",
+  waitlisted: "bg-amber-500",
 };
+const participantStatusLabels = {
+  registered: "Registered",
+  confirmed: "Confirmed",
+  waitlisted: "Waitlisted",
+};
+const participantStatusStyles = {
+  registered: "border-sky-500 bg-sky-50 text-sky-950 hover:bg-sky-100",
+  confirmed: "border-emerald-600 bg-emerald-50 text-emerald-950 hover:bg-emerald-100",
+  waitlisted: "border-amber-500 bg-amber-50 text-amber-950 hover:bg-amber-100",
+};
+
+type CalendarVariant = "coordinator" | "participant";
+
+function displayStatus(event: CalendarEvent, variant: CalendarVariant) {
+  return variant === "participant" ? event.registrationStatus ?? "registered" : event.status;
+}
+
+function displayHref(event: CalendarEvent, variant: CalendarVariant) {
+  if (variant === "participant") {
+    return event.registrationStatus === "waitlisted" ? "/participant/events" : `/api/calendar/${event.id}`;
+  }
+  return eventHref(event);
+}
+
+function displayDetail(event: CalendarEvent, variant: CalendarVariant, addToCalendarLabel: string) {
+  if (variant === "participant") {
+    return event.registrationStatus === "waitlisted" ? "View registration" : addToCalendarLabel;
+  }
+  return readinessLabel(event);
+}
 
 function formatKey(key: string, options: Intl.DateTimeFormatOptions) {
   return new Intl.DateTimeFormat("en-SG", { ...options, timeZone: "UTC" }).format(dateKeyToUtc(key));
@@ -72,33 +105,36 @@ function intersects(event: CalendarEvent, startKey: string, endKey: string) {
   return range.startKey <= endKey && range.endKey >= startKey;
 }
 
-function EventList({ events, emptyMessage = "No events in this period." }: { events: CalendarEvent[]; emptyMessage?: string }) {
+function EventList({ events, emptyMessage = "No events in this period.", variant, addToCalendarLabel }: { events: CalendarEvent[]; emptyMessage?: string; variant: CalendarVariant; addToCalendarLabel: string }) {
   if (!events.length) {
     return <div className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">{emptyMessage}</div>;
   }
   return (
     <div className="space-y-3">
-      {events.map((event) => (
+      {events.map((event) => {
+        const status = displayStatus(event, variant);
+        const detail = displayDetail(event, variant, addToCalendarLabel);
+        return (
         <Link
           className="group grid gap-4 rounded-xl border bg-card p-4 transition-colors hover:bg-accent/40 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
-          href={eventHref(event)}
+          href={displayHref(event, variant)}
           key={event.id}
         >
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className={cn("size-2.5 rounded-full", legendDots[event.status])} aria-hidden="true" />
+              <span className={cn("size-2.5 rounded-full", legendDots[status])} aria-hidden="true" />
               <h3 className="truncate font-bold group-hover:text-primary">{event.name}</h3>
-              <Badge variant="outline">{stageLabels[event.status]}</Badge>
+              <Badge variant="outline">{variant === "participant" ? participantStatusLabels[status as keyof typeof participantStatusLabels] : stageLabels[event.status]}</Badge>
             </div>
             <p className="mt-2 flex items-center gap-2 text-sm text-muted-foreground"><Clock3 className="size-4 shrink-0" />{formatEventRange(event)}</p>
             <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground"><MapPin className="size-4 shrink-0" />{event.venue} · {event.organisationName}</p>
           </div>
-          <span className={cn("inline-flex items-center gap-1.5 text-xs font-semibold", readinessLabel(event).includes("outstanding") || event.status === "awaiting_closure" ? "text-amber-700" : "text-primary")}>
-            {(readinessLabel(event).includes("outstanding") || event.status === "awaiting_closure") && <AlertCircle className="size-4" />}
-            {readinessLabel(event)}
+          <span className={cn("inline-flex items-center gap-1.5 text-xs font-semibold", variant === "coordinator" && (detail.includes("outstanding") || event.status === "awaiting_closure") ? "text-amber-700" : "text-primary")}>
+            {variant === "coordinator" && (detail.includes("outstanding") || event.status === "awaiting_closure") && <AlertCircle className="size-4" />}
+            {detail}
           </span>
         </Link>
-      ))}
+      );})}
     </div>
   );
 }
@@ -126,7 +162,7 @@ function getMonthSegments(events: CalendarEvent[], weekKeys: string[]) {
   });
 }
 
-function MonthView({ anchorKey, events, todayKey }: { anchorKey: string; events: CalendarEvent[]; todayKey: string }) {
+function MonthView({ anchorKey, events, todayKey, variant, addToCalendarLabel }: { anchorKey: string; events: CalendarEvent[]; todayKey: string; variant: CalendarVariant; addToCalendarLabel: string }) {
   const keys = monthGridKeys(anchorKey);
   const currentMonth = anchorKey.slice(0, 7);
   const weeks = Array.from({ length: keys.length / 7 }, (_, index) => keys.slice(index * 7, index * 7 + 7));
@@ -147,19 +183,22 @@ function MonthView({ anchorKey, events, todayKey }: { anchorKey: string; events:
                 </span>
               </div>
             ))}
-            {segments.map(({ event, lane, span, startIndex }) => (
+            {segments.map(({ event, lane, span, startIndex }) => {
+              const status = displayStatus(event, variant);
+              const detail = displayDetail(event, variant, addToCalendarLabel);
+              return (
               <Link
-                aria-label={`${event.name}, ${formatEventRange(event)}, ${readinessLabel(event)}`}
-                className={cn("z-10 mx-1.5 truncate border-l-4 px-2 py-1 text-xs font-semibold shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", stageStyles[event.status])}
-                href={eventHref(event)}
+                aria-label={`${event.name}, ${formatEventRange(event)}, ${detail}`}
+                className={cn("z-10 mx-1.5 truncate border-l-4 px-2 py-1 text-xs font-semibold shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", variant === "participant" ? participantStatusStyles[status as keyof typeof participantStatusStyles] : stageStyles[event.status])}
+                href={displayHref(event, variant)}
                 key={`${event.id}-${week[0]}`}
                 style={{ gridColumn: `${startIndex + 1} / span ${span}`, gridRow: 1, alignSelf: "start", marginTop: `${45 + lane * 34}px` }}
-                title={`${event.name} · ${readinessLabel(event)}`}
+                title={`${event.name} · ${detail}`}
               >
                 <span className="block truncate">{event.name}</span>
                 {span > 1 && <span className="block truncate font-normal opacity-75">{formatEventTime(event)}</span>}
               </Link>
-            ))}
+            );})}
           </div>
         );
       })}
@@ -167,7 +206,7 @@ function MonthView({ anchorKey, events, todayKey }: { anchorKey: string; events:
   );
 }
 
-function WeekView({ anchorKey, events, todayKey }: { anchorKey: string; events: CalendarEvent[]; todayKey: string }) {
+function WeekView({ anchorKey, events, todayKey, variant }: { anchorKey: string; events: CalendarEvent[]; todayKey: string; variant: CalendarVariant }) {
   const start = startOfWeekKey(anchorKey);
   const keys = Array.from({ length: 7 }, (_, index) => shiftDateKey(start, index));
   return (
@@ -181,12 +220,14 @@ function WeekView({ anchorKey, events, todayKey }: { anchorKey: string; events: 
               <p className="mt-1 text-xl font-bold">{Number(key.slice(8, 10))}</p>
             </div>
             <div className="space-y-2 p-2">
-              {dayEvents.map((event) => (
-                <Link className={cn("block border-l-4 p-2 text-xs transition-colors", stageStyles[event.status])} href={eventHref(event)} key={event.id}>
+              {dayEvents.map((event) => {
+                const status = displayStatus(event, variant);
+                return (
+                <Link className={cn("block border-l-4 p-2 text-xs transition-colors", variant === "participant" ? participantStatusStyles[status as keyof typeof participantStatusStyles] : stageStyles[event.status])} href={displayHref(event, variant)} key={event.id}>
                   <span className="block font-bold">{event.name}</span>
                   <span className="mt-1 block opacity-75">{formatEventTime(event)}</span>
                 </Link>
-              ))}
+              );})}
             </div>
           </div>
         );
@@ -195,7 +236,7 @@ function WeekView({ anchorKey, events, todayKey }: { anchorKey: string; events: 
   );
 }
 
-export function CoordinatorCalendar({ events, todayKey }: { events: CalendarEvent[]; todayKey: string }) {
+function EventCalendar({ events, todayKey, variant, addToCalendarLabel = "Add to calendar", emptyMessage = "No events in this period." }: { events: CalendarEvent[]; todayKey: string; variant: CalendarVariant; addToCalendarLabel?: string; emptyMessage?: string }) {
   const [view, setView] = useState<CalendarView>("month");
   const [anchorKey, setAnchorKey] = useState(todayKey);
   const [status, setStatus] = useState("all");
@@ -204,10 +245,10 @@ export function CoordinatorCalendar({ events, todayKey }: { events: CalendarEven
   const [venue, setVenue] = useState("all");
   const optionValues = (key: "eventType" | "organisationName" | "venue") => [...new Set(events.map((event) => event[key]))].sort();
   const filteredEvents = useMemo(() => events.filter((event) =>
-    (status === "all" || event.status === status)
+    (status === "all" || displayStatus(event, variant) === status)
     && (eventType === "all" || event.eventType === eventType)
     && (organisation === "all" || event.organisationName === organisation)
-    && (venue === "all" || event.venue === venue)), [events, eventType, organisation, status, venue]);
+    && (venue === "all" || event.venue === venue)), [events, eventType, organisation, status, variant, venue]);
   const sortedEvents = [...filteredEvents].sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
   const monthKeys = monthGridKeys(anchorKey);
   const weekStart = startOfWeekKey(anchorKey);
@@ -226,6 +267,7 @@ export function CoordinatorCalendar({ events, todayKey }: { events: CalendarEven
   const hasFilters = status !== "all" || eventType !== "all" || organisation !== "all" || venue !== "all";
   const move = (direction: number) => setAnchorKey(view === "month" ? shiftMonthKey(anchorKey, direction) : shiftDateKey(anchorKey, direction * (view === "week" ? 7 : 1)));
   const resetFilters = () => { setStatus("all"); setEventType("all"); setOrganisation("all"); setVenue("all"); };
+  const statusLabels = variant === "participant" ? participantStatusLabels : stageLabels;
 
   return (
     <Card className="border-0 shadow-soft">
@@ -246,7 +288,7 @@ export function CoordinatorCalendar({ events, todayKey }: { events: CalendarEven
 
         <div className="grid gap-3 rounded-xl bg-muted/60 p-3 sm:grid-cols-2 xl:grid-cols-[repeat(4,minmax(0,1fr))_auto]">
           {[
-            { label: "Status", allLabel: "All statuses", value: status, set: setStatus, options: Object.entries(stageLabels) },
+            { label: variant === "participant" ? "Registration" : "Status", allLabel: variant === "participant" ? "All registrations" : "All statuses", value: status, set: setStatus, options: Object.entries(statusLabels) },
             { label: "Event type", allLabel: "All event types", value: eventType, set: setEventType, options: optionValues("eventType").map((value) => [value, value]) },
             { label: "Organisation", allLabel: "All organisations", value: organisation, set: setOrganisation, options: optionValues("organisationName").map((value) => [value, value]) },
             { label: "Venue", allLabel: "All venues", value: venue, set: setVenue, options: optionValues("venue").map((value) => [value, value]) },
@@ -262,23 +304,31 @@ export function CoordinatorCalendar({ events, todayKey }: { events: CalendarEven
         </div>
 
         <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground" aria-label="Event status legend">
-          {Object.entries(stageLabels).map(([key, label]) => <span className="flex items-center gap-1.5" key={key}><span className={cn("size-2.5 rounded-full", legendDots[key as keyof typeof legendDots])} />{label}</span>)}
+          {Object.entries(statusLabels).map(([key, label]) => <span className="flex items-center gap-1.5" key={key}><span className={cn("size-2.5 rounded-full", legendDots[key as keyof typeof legendDots])} />{label}</span>)}
           <span className="ml-auto font-semibold">{filteredEvents.length} {filteredEvents.length === 1 ? "event" : "events"}</span>
         </div>
 
         <div className="hidden overflow-x-auto md:block">
           <div className={view === "month" || view === "week" ? "min-w-[900px]" : undefined}>
-            {view === "month" && <MonthView anchorKey={anchorKey} events={filteredEvents} todayKey={todayKey} />}
-            {view === "week" && <WeekView anchorKey={anchorKey} events={filteredEvents} todayKey={todayKey} />}
-            {view === "day" && <EventList events={periodEvents} />}
-            {view === "list" && <EventList events={periodEvents} emptyMessage="No events match these filters." />}
+            {view === "month" && <MonthView anchorKey={anchorKey} events={filteredEvents} todayKey={todayKey} variant={variant} addToCalendarLabel={addToCalendarLabel} />}
+            {view === "week" && <WeekView anchorKey={anchorKey} events={filteredEvents} todayKey={todayKey} variant={variant} />}
+            {view === "day" && <EventList events={periodEvents} variant={variant} addToCalendarLabel={addToCalendarLabel} emptyMessage={emptyMessage} />}
+            {view === "list" && <EventList events={periodEvents} variant={variant} addToCalendarLabel={addToCalendarLabel} emptyMessage="No events match these filters." />}
           </div>
         </div>
         <div className="md:hidden">
           <div className="mb-3 flex items-center gap-2 text-sm font-semibold"><CalendarDays className="size-4 text-primary" />Compact calendar list</div>
-          <EventList events={periodEvents} emptyMessage={view === "list" ? "No events match these filters." : "No events in this period."} />
+          <EventList events={periodEvents} variant={variant} addToCalendarLabel={addToCalendarLabel} emptyMessage={view === "list" ? "No events match these filters." : emptyMessage} />
         </div>
       </CardContent>
     </Card>
   );
+}
+
+export function CoordinatorCalendar(props: { events: CalendarEvent[]; todayKey: string }) {
+  return <EventCalendar {...props} variant="coordinator" />;
+}
+
+export function ParticipantCalendar(props: { events: CalendarEvent[]; todayKey: string; addToCalendarLabel?: string; emptyMessage?: string }) {
+  return <EventCalendar {...props} variant="participant" />;
 }

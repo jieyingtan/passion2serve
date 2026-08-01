@@ -1,6 +1,7 @@
 import type { EventStage } from "@/lib/events/stages";
 
 export type CalendarView = "month" | "week" | "day" | "list";
+export type ParticipantRegistrationStatus = "registered" | "confirmed" | "waitlisted";
 
 export interface CalendarEvent {
   businessConfirmed: number;
@@ -12,6 +13,7 @@ export interface CalendarEvent {
   organisationName: string;
   participantCapacity: number | null;
   participantReviewed: boolean;
+  registrationStatus?: ParticipantRegistrationStatus;
   registrationCount: number;
   startsAt: string;
   status: EventStage;
