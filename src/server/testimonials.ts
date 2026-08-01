@@ -46,6 +46,13 @@ const DEMO_TESTIMONIALS: Testimonial[] = [
   },
 ];
 
+function relatedText(value: unknown, field: "full_name" | "name") {
+  const related = Array.isArray(value) ? value[0] : value;
+  if (!related || typeof related !== "object") return null;
+  const text = (related as Record<string, unknown>)[field];
+  return typeof text === "string" && text.trim() ? text : null;
+}
+
 export async function getTestimonials(): Promise<Testimonial[]> {
   try {
     const supabase = await createClient();
@@ -66,15 +73,18 @@ export async function getTestimonials(): Promise<Testimonial[]> {
 
     if (error || !data || data.length === 0) return DEMO_TESTIMONIALS;
 
-    return data
-      .filter((row: any) => row.feedback && row.profiles && row.events)
-      .map((row: any) => ({
+    return data.flatMap((row) => {
+      const fullName = relatedText(row.profiles, "full_name");
+      const eventName = relatedText(row.events, "name");
+      if (!row.feedback || !eventName) return [];
+      return [{
         id: row.id,
-        firstName: row.profiles.full_name?.split(" ")[0] ?? "Participant",
-        eventName: row.events.name,
+        firstName: fullName?.split(" ")[0] ?? "Participant",
+        eventName,
         feedback: row.feedback,
         rating: row.rating,
-      }));
+      }];
+    });
   } catch {
     return DEMO_TESTIMONIALS;
   }
