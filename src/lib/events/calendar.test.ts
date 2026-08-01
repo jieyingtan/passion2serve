@@ -37,6 +37,8 @@ describe("calendar readiness", () => {
       venue: "Community Hub",
       status: "ongoing",
       organisationName: "Example organisation",
+      participantCapacity: 25,
+      registrationCount: 12,
       volunteerTarget: 3,
       volunteerConfirmed: 2,
       businessTarget: 1,

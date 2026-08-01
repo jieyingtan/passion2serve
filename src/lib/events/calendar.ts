@@ -10,7 +10,9 @@ export interface CalendarEvent {
   id: string;
   name: string;
   organisationName: string;
+  participantCapacity: number | null;
   participantReviewed: boolean;
+  registrationCount: number;
   startsAt: string;
   status: EventStage;
   venue: string;

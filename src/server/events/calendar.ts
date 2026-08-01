@@ -14,7 +14,7 @@ export async function listCoordinatorCalendarEvents() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("events")
-    .select("id, name, event_type, starts_at, ends_at, venue, status, volunteer_target, business_target, participant_reviewed_at, beneficiary_organisations(name), event_businesses(status), event_volunteers(status)")
+    .select("id, name, event_type, starts_at, ends_at, venue, status, volunteer_target, business_target, participant_capacity, participant_reviewed_at, beneficiary_organisations(name), event_businesses(status), event_volunteers(status), registrations(status)")
     .order("starts_at", { ascending: true });
 
   if (error) return { events: [] as CalendarEvent[], error: error.message };
@@ -32,6 +32,10 @@ export async function listCoordinatorCalendarEvents() {
       venue: event.venue as string,
       status: event.status as EventStage,
       organisationName: organisation?.name ?? "No organisation",
+      participantCapacity: event.participant_capacity as number | null,
+      registrationCount: Array.isArray(event.registrations)
+        ? (event.registrations as StatusRelation[]).filter((item) => !["cancelled", "ineligible"].includes(item.status)).length
+        : 0,
       volunteerTarget: event.volunteer_target as number,
       volunteerConfirmed: countConfirmed(event.event_volunteers),
       businessTarget: event.business_target as number,
