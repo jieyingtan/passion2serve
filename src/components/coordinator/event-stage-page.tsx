@@ -9,6 +9,8 @@ import { Progress } from "@/components/ui/progress";
 import { formatEventDate, getEventStage, type EventStage } from "@/lib/events/stages";
 import { listEventsByStage } from "@/server/events/stages";
 
+import { DeleteEventButton } from "@/app/coordinator/events/ongoing/delete-button";
+
 const stageIcons = {
   create: Plus,
   ongoing: Radio,
@@ -103,13 +105,14 @@ export async function EventStagePage({ status }: { status: Exclude<EventStage, "
 
                   {status === "archived" && <p className="mt-4 text-sm text-muted-foreground">Recorded attendance: <span className="font-semibold text-foreground">{event.attendanceCount}</span></p>}
 
-                  <div className="mt-6 flex flex-wrap justify-end gap-2">
+                  <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
                     {status === "ongoing" && <Button asChild size="sm" variant="outline"><Link href={`/coordinator/events/${event.id}/edit`}><Pencil className="size-4"/>Edit requirements</Link></Button>}
                     <Button asChild size="sm" variant="outline">
                       <Link href={status === "ongoing" ? `/coordinator/events/${event.id}/operations` : `/coordinator/events/${event.id}/lifecycle`}>
                         {status === "ongoing" ? "Manage event operations" : status === "upcoming" ? "Attendance and delivery" : status === "awaiting_closure" ? "Complete closure" : "View event record"} <ArrowRight className="size-4" />
                       </Link>
                     </Button>
+                    {status === "ongoing" && <DeleteEventButton eventId={event.id} eventName={event.name} />}
                   </div>
                 </CardContent>
               </Card>

@@ -1,8 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { z } from "zod";
 
+import { saveEventTranslations } from "@/lib/ai/translate";
 import { isSupabaseConfigured } from "@/lib/config";
 import { singaporeLocalToIso } from "@/lib/events/datetime";
 import { eventTypes } from "@/lib/events/matching";
@@ -105,6 +107,10 @@ export async function createEvent(
   if (eventId) {
     const { error: courseError } = await admin.from("events").update({ course_id: course.id }).eq("id", eventId).eq("created_by", user.id);
     if (courseError) return { error: "The event was created, but its course prerequisites could not be saved." };
+
+    after(async () => {
+      await saveEventTranslations(eventId, parsed.data.name, parsed.data.description ?? null, parsed.data.venue);
+    });
   }
 
   redirect(

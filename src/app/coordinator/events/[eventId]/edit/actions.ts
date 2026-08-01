@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { updateEventTranslations } from "@/lib/ai/translate";
 import { singaporeLocalToIso } from "@/lib/events/datetime";
 import { eventTypes } from "@/lib/events/matching";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -90,5 +91,13 @@ export async function updateEvent(
   revalidatePath(`/coordinator/events/${current.id}/operations`);
   revalidatePath(`/coordinator/events/${current.id}/lifecycle`);
   revalidatePath(`/coordinator/events/${current.id}/edit`);
+
+  updateEventTranslations(
+    current.id,
+    parsed.data.name,
+    parsed.data.description ?? null,
+    parsed.data.venue,
+  ).catch((err) => console.error("Background event translation update failed:", err));
+
   return { success: "Event requirements updated. Participant readiness has been reset for review." };
 }
