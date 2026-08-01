@@ -9,7 +9,7 @@ import { signIn, type LoginState } from "./actions";
 
 const initialState: LoginState = {};
 
-export function LoginForm({ nextPath, role }: { nextPath?: string; role: AppRole }) {
+export function LoginForm({ defaultEmail = "", nextPath, role }: { defaultEmail?: string; nextPath?: string; role: AppRole }) {
   const [state, formAction, pending] = useActionState(signIn, initialState);
   const roleLabel = role === "coordinator" ? "Coordinator" : "Participant";
 
@@ -22,6 +22,7 @@ export function LoginForm({ nextPath, role }: { nextPath?: string; role: AppRole
         <input
           autoComplete="email"
           className="mt-2 h-11 w-full rounded-md border bg-background px-3 font-normal outline-none ring-offset-background focus:ring-2 focus:ring-ring"
+          defaultValue={defaultEmail}
           name="email"
           placeholder="you@example.org"
           required

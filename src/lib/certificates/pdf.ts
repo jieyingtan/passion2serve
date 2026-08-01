@@ -1,30 +1,76 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+const PAGE_WIDTH = 842;
+const PAGE_HEIGHT = 595;
+const TEMPLATE_WIDTH = 1492;
+const TEMPLATE_HEIGHT = 1054;
+
 function pdfEscape(value: string) {
   return value.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)").replace(/[^\x20-\x7e]/g, "?");
 }
 
-export function buildCertificatePdf(input: { participantName: string; eventName: string; eventDate: string; certificateNumber: string }) {
-  const lines = [
-    { size: 28, y: 520, text: "Certificate of Participation" },
-    { size: 14, y: 470, text: "Passion2Serve proudly recognises" },
-    { size: 24, y: 420, text: input.participantName },
-    { size: 14, y: 370, text: `for completing ${input.eventName}` },
-    { size: 12, y: 335, text: input.eventDate },
-    { size: 10, y: 80, text: `Certificate ${input.certificateNumber}` },
-  ];
-  const stream = lines.map((line) => `BT /F1 ${line.size} Tf 1 0 0 1 90 ${line.y} Tm (${pdfEscape(line.text)}) Tj ET`).join("\n");
-  const objects = [
-    "<< /Type /Catalog /Pages 2 0 R >>",
-    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 792 612] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
-    `<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}\nendstream`,
-    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>",
-  ];
-  let pdf = "%PDF-1.4\n";
+function fittedSize(value: string, preferred: number, minimum: number, maximumWidth: number) {
+  const estimatedWidth = value.length * preferred * 0.56;
+  return estimatedWidth <= maximumWidth
+    ? preferred
+    : Math.max(minimum, Math.floor(preferred * maximumWidth / estimatedWidth));
+}
+
+function centredText(value: string, y: number, preferredSize: number, minimumSize = 10, maximumWidth = 680, font = "F1") {
+  const size = fittedSize(value, preferredSize, minimumSize, maximumWidth);
+  const estimatedWidth = value.length * size * 0.56;
+  const x = Math.max(52, (PAGE_WIDTH - estimatedWidth) / 2);
+  return `BT /${font} ${size} Tf 0.09 0.32 0.29 rg 1 0 0 1 ${x.toFixed(1)} ${y} Tm (${pdfEscape(value)}) Tj ET`;
+}
+
+function buildPdf(objects: Buffer[]) {
+  const chunks: Buffer[] = [Buffer.from("%PDF-1.4\n%\xe2\xe3\xcf\xd3\n", "binary")];
   const offsets = [0];
-  objects.forEach((object, index) => { offsets[index + 1] = Buffer.byteLength(pdf); pdf += `${index + 1} 0 obj\n${object}\nendobj\n`; });
-  const xref = Buffer.byteLength(pdf);
-  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
-  for (let index = 1; index <= objects.length; index += 1) pdf += `${String(offsets[index]).padStart(10, "0")} 00000 n \n`;
-  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
-  return Buffer.from(pdf);
+  let byteLength = chunks[0].length;
+
+  objects.forEach((object, index) => {
+    offsets[index + 1] = byteLength;
+    const prefix = Buffer.from(`${index + 1} 0 obj\n`);
+    const suffix = Buffer.from("\nendobj\n");
+    chunks.push(prefix, object, suffix);
+    byteLength += prefix.length + object.length + suffix.length;
+  });
+
+  const xrefOffset = byteLength;
+  let xref = `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (let index = 1; index <= objects.length; index += 1) {
+    xref += `${String(offsets[index]).padStart(10, "0")} 00000 n \n`;
+  }
+  xref += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+  chunks.push(Buffer.from(xref));
+  return Buffer.concat(chunks);
+}
+
+export function buildCertificatePdf(input: { participantName: string; eventName: string; eventDate: string; certificateNumber: string }) {
+  const template = readFileSync(join(process.cwd(), "public", "certificates", "passion2serve-certificate-template.jpg"));
+  const stream = [
+    `q ${PAGE_WIDTH} 0 0 ${PAGE_HEIGHT} 0 0 cm /Im1 Do Q`,
+    centredText("This certificate is proudly presented to", 312, 12, 10, 560, "F1"),
+    centredText(input.participantName, 278, 27, 16, 670, "F2"),
+    centredText("for participating in", 238, 12, 10, 560, "F1"),
+    centredText(input.eventName, 205, 19, 12, 650, "F2"),
+    centredText(input.eventDate, 173, 12, 10, 500, "F1"),
+    centredText(`Certificate No. ${input.certificateNumber}`, 130, 9, 8, 500, "F1"),
+  ].join("\n");
+  const streamBuffer = Buffer.from(stream);
+
+  return buildPdf([
+    Buffer.from("<< /Type /Catalog /Pages 2 0 R >>"),
+    Buffer.from("<< /Type /Pages /Kids [3 0 R] /Count 1 >>"),
+    Buffer.from(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> /XObject << /Im1 7 0 R >> >> /Contents 4 0 R >>`),
+    Buffer.concat([Buffer.from(`<< /Length ${streamBuffer.length} >>\nstream\n`), streamBuffer, Buffer.from("\nendstream")]),
+    Buffer.from("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"),
+    Buffer.from("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>"),
+    Buffer.concat([
+      Buffer.from(`<< /Type /XObject /Subtype /Image /Width ${TEMPLATE_WIDTH} /Height ${TEMPLATE_HEIGHT} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${template.length} >>\nstream\n`),
+      template,
+      Buffer.from("\nendstream"),
+    ]),
+  ]);
 }

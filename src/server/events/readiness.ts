@@ -25,7 +25,7 @@ export async function advanceEventIfReady(eventId: string) {
     transition_reason: "Business, volunteer, and participant readiness completed",
     override_requirements: false,
   });
-  if (error) throw new Error("Targets were met, but the event could not move to Upcoming.");
+  if (error) throw new Error(error.message || "Targets were met, but the event could not move to Upcoming.");
 
   revalidatePath("/coordinator/dashboard");
   revalidatePath("/coordinator/events/ongoing");

@@ -17,7 +17,7 @@ export default async function CoordinatorLayout({ children }: { children: React.
   const profile = await getCurrentProfile();
 
   return (
-    <AppShell navigation={navigation} roleLabel="Coordinator" userName={profile?.fullName ?? "Jamie Tan"}>
+    <AppShell navigation={navigation} profileHref="/coordinator/profile" roleLabel="Coordinator" userName={profile?.fullName ?? "Jamie Tan"}>
       {children}
     </AppShell>
   );

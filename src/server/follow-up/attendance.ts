@@ -31,25 +31,24 @@ export async function processAttendanceFollowUp(input: { eventId: string; partic
   if (badges?.length) await admin.from("participant_badges").upsert(badges.map((badge) => ({ participant_id: input.participantId, badge_id: badge.id, source_event_id: input.eventId })), { onConflict: "participant_id,badge_id", ignoreDuplicates: true });
 
   let emailStatus = certificate.email_status;
-  if (!profile.email_consent) emailStatus = "skipped";
-  else if (certificate.email_status !== "sent" && isMailjetConfigured()) {
+  // Attendance acknowledgements and certificates are transactional service
+  // messages requested as part of event participation, not marketing email.
+  if (certificate.email_status !== "sent" && isMailjetConfigured()) {
     try {
       const result = await sendEmail({
-        toEmail: profile.email, toName: profile.full_name, subject: `Your certificate for ${event.name}`,
-        text: `Thank you for participating in ${event.name}. Your attendance is recorded and your named certificate is attached. Certificate: ${certificateNumber}.`,
-        html: `<p>Hello ${escapeEmailHtml(profile.full_name)},</p><p>Thank you for completing <strong>${escapeEmailHtml(event.name)}</strong>. Your attendance has been recorded.</p><p>Your named certificate is attached and is also available from your Passion2Serve profile.</p><p>Certificate: ${escapeEmailHtml(certificateNumber)}</p>`,
+        toEmail: profile.email, toName: profile.full_name, subject: `Attendance confirmed: ${event.name}`,
+        text: `Hello ${profile.full_name},\n\nYour attendance for ${event.name} on ${eventDate} has been recorded. Thank you for participating with Passion2Serve.\n\nYour named Certificate of Participation is attached as a PDF and has also been saved to your participant profile.\n\nCertificate number: ${certificateNumber}`,
+        html: `<div style="font-family:Arial,sans-serif;max-width:620px;margin:auto;color:#173b37;line-height:1.6"><p style="font-size:13px;font-weight:700;letter-spacing:.12em;color:#237266">PASSION2SERVE</p><h1 style="font-size:26px">Your attendance is confirmed</h1><p>Hello ${escapeEmailHtml(profile.full_name)},</p><p>Your attendance for <strong>${escapeEmailHtml(event.name)}</strong> on ${escapeEmailHtml(eventDate)} has been recorded. Thank you for participating with Passion2Serve.</p><div style="background:#f1f7f5;border-radius:14px;padding:18px 20px;margin:22px 0"><strong>Your Certificate of Participation is ready</strong><p style="margin-bottom:0">The named PDF certificate is attached to this email and has also been saved to your participant profile.</p></div><p style="font-size:14px;color:#617773">Certificate number: ${escapeEmailHtml(certificateNumber)}</p></div>`,
         customId: certificate.id, eventPayload: certificate.id,
         attachments: [{ filename: `${certificateNumber}.pdf`, contentType: "application/pdf", base64Content: pdf.toString("base64") }],
       });
       emailStatus = "sent";
-      await admin.from("certificates").update({ email_status: "sent", email_message_id: result.messageId || result.messageUuid, email_error: null }).eq("id", certificate.id);
+      await admin.from("certificates").update({ email_status: "sent", email_message_id: result.messageUuid || result.messageId, email_error: null }).eq("id", certificate.id);
     } catch (error) {
       emailStatus = "failed";
       await admin.from("certificates").update({ email_status: "failed", email_error: error instanceof Error ? error.message : "Mailjet delivery failed." }).eq("id", certificate.id);
     }
   }
-  if (emailStatus === "skipped") await admin.from("certificates").update({ email_status: "skipped" }).eq("id", certificate.id);
-
   const acknowledgementUrl: string | null = profile.phone ? buildAttendanceAcknowledgementUrl(profile.phone, profile.full_name, event.name) : null;
   let whatsappStatus = "skipped";
   if (profile.whatsapp_consent && profile.phone) {

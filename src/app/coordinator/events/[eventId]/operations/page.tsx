@@ -1,19 +1,20 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, Building2, ExternalLink, Pencil, Sparkles, UserRoundCheck, UsersRound } from "lucide-react";
+import { ArrowLeft, Building2, Check, Clock3, Pencil, Sparkles, UserRoundCheck, UsersRound, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { getEventStage, type EventStage } from "@/lib/events/stages";
-import { buildWhatsAppUrl, businessOutreachMessage, volunteerOutreachMessage } from "@/lib/outreach/whatsapp";
 import { createClient } from "@/lib/supabase/server";
 
 import { updateBusinessStatus, updateVolunteerStatus } from "./actions";
 import { AiShortlistForm } from "./ai-shortlist-form";
+import { OutreachSendForm } from "./outreach-send-form";
 import { moveReadyEventToUpcoming } from "../lifecycle/actions";
 import { VolunteerImportForm } from "./volunteer-import-form";
+
 function percent(value: number, target: number) {
   return target ? Math.min(100, Math.round(value / target * 100)) : 100;
 }
@@ -26,6 +27,62 @@ const selectionPriority: Record<string, number> = {
   attended: 7, confirmed: 6, awaiting_response: 5, contacted: 4,
   recommended: 3, not_contacted: 3, declined: 2, no_show: 1,
 };
+
+const responseStatuses = [
+  { value: "awaiting_response", label: "Awaiting", icon: Clock3 },
+  { value: "confirmed", label: "Confirmed", icon: Check },
+  { value: "declined", label: "Declined", icon: X },
+] as const;
+
+function OutreachActions({
+  action,
+  eventId,
+  selectionId,
+  selectionField,
+  recipientType,
+  currentStatus,
+}: {
+  action: (formData: FormData) => Promise<void>;
+  eventId: string;
+  selectionId: string;
+  selectionField: "eventBusinessId" | "eventVolunteerId";
+  recipientType: "business" | "volunteer";
+  currentStatus: string;
+}) {
+  return (
+    <div className="flex w-full flex-col gap-2.5 md:w-[390px]">
+      <OutreachSendForm eventId={eventId} recipientType={recipientType} selectionId={selectionId} />
+      <div aria-label="Update outreach status" className="grid grid-cols-3 gap-1 rounded-lg bg-muted p-1">
+        {responseStatuses.map(({ value, label, icon: Icon }) => {
+          const selected = currentStatus === value;
+          return (
+            <form action={action} key={value}>
+              <input name="eventId" type="hidden" value={eventId} />
+              <input name={selectionField} type="hidden" value={selectionId} />
+              <input name="status" type="hidden" value={value} />
+              <Button
+                aria-pressed={selected}
+                className={selected
+                  ? value === "confirmed"
+                    ? "w-full bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
+                    : value === "awaiting_response"
+                      ? "w-full bg-amber-100 text-amber-900 shadow-sm hover:bg-amber-100"
+                      : "w-full bg-background text-foreground shadow-sm hover:bg-background"
+                  : "w-full text-muted-foreground hover:text-foreground"}
+                size="sm"
+                type="submit"
+                variant="ghost"
+              >
+                <Icon className="size-3.5" />
+                <span className="max-[420px]:sr-only">{label}</span>
+              </Button>
+            </form>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export default async function EventOperationsPage({ params }: { params: Promise<{ eventId: string }> }) {
   const { eventId } = await params;
@@ -63,6 +120,7 @@ export default async function EventOperationsPage({ params }: { params: Promise<
   const confirmedVolunteers = cleanSelectedVolunteers.filter((item) => item.status === "confirmed").length;
   const stage = getEventStage(event.status as EventStage);
   const outreachReady = confirmedBusinesses >= event.business_target && confirmedVolunteers >= event.volunteer_target;
+  const readyForUpcoming = outreachReady && Boolean(event.participant_reviewed_at);
 
   return (
     <div className="mx-auto max-w-7xl space-y-8">
@@ -79,24 +137,47 @@ export default async function EventOperationsPage({ params }: { params: Promise<
         <Card className="border-0"><CardContent className="p-5"><div className="flex justify-between"><span className="font-semibold">Volunteer readiness</span><strong>{confirmedVolunteers}/{event.volunteer_target}</strong></div><Progress className="mt-3" label="Volunteer readiness" value={percent(confirmedVolunteers, event.volunteer_target)} /></CardContent></Card>
       </div>
 
-      <Card className="border-0"><CardContent className="flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center"><div><strong>Participant list review</strong><p className="mt-1 text-sm text-muted-foreground">Open the participant list, check invitations and registrations, then complete the review there.</p></div>{event.participant_reviewed_at?<Badge variant="success">Reviewed</Badge>:<Button asChild variant="outline"><Link href={`/coordinator/events/${event.id}/participants`}>Review participant list</Link></Button>}</CardContent></Card>
-
       <Card className="border-0 bg-accent"><CardContent className="flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center"><div><strong className="flex items-center gap-2"><Sparkles className="size-5 text-primary"/>AI-powered matching</strong><p className="mt-1 text-sm text-muted-foreground">The outreach lists start empty. Generate a shortlist to match and add both businesses and volunteers for this event.</p></div><AiShortlistForm eventId={event.id} hasShortlist={Boolean(cleanSelectedBusinesses.length || cleanSelectedVolunteers.length)} /></CardContent></Card>
 
       <section className="space-y-5">
-        <div><h2 className="flex items-center gap-2 text-2xl font-bold"><Building2 className="size-6 text-primary" /> Business outreach</h2><p className="mt-1 text-muted-foreground">Review recommendations, open a pre-filled WhatsApp message, and record the response.</p></div>
+        <div><h2 className="flex items-center gap-2 text-2xl font-bold"><Building2 className="size-6 text-primary" /> Business outreach</h2><p className="mt-1 text-muted-foreground">Send a personalised WhatsApp template through Meta Cloud API and record the response.</p></div>
         {cleanSelectedBusinesses.length === 0 && <Card className="border-dashed bg-transparent"><CardContent className="p-6 text-sm text-muted-foreground">No businesses have been shortlisted yet. Generate the AI shortlist to begin outreach.</CardContent></Card>}
-        <div className="space-y-3">{cleanSelectedBusinesses.map((selection) => { const business = Array.isArray(selection.businesses) ? selection.businesses[0] : selection.businesses; if (!business) return null; const message = businessOutreachMessage({ contactName: business.contact_name, eventName: event.name, organisationName: organisation?.name ?? "our beneficiary organisation", eventDate, venue: event.venue }); return <Card className="border-0" key={selection.id}><CardContent className="flex flex-col justify-between gap-5 p-5 lg:flex-row lg:items-center"><div><div className="flex flex-wrap items-center gap-2"><strong>{business.name}</strong><Badge variant={statusVariant(selection.status)}>{selection.status.replaceAll("_", " ")}</Badge><Badge variant="outline">Match {selection.match_score}%</Badge></div><p className="mt-2 text-sm text-muted-foreground">{selection.match_explanation}</p></div><div className="flex flex-wrap gap-2"><Button asChild size="sm" variant="outline"><a href={buildWhatsAppUrl(business.phone, message)} rel="noreferrer" target="_blank">Open WhatsApp <ExternalLink className="size-3.5" /></a></Button>{["awaiting_response", "confirmed", "declined"].map((status) => <form action={updateBusinessStatus} key={status}><input name="eventId" type="hidden" value={event.id} /><input name="eventBusinessId" type="hidden" value={selection.id} /><input name="status" type="hidden" value={status} /><Button size="sm" type="submit" variant={status === "confirmed" ? "default" : "ghost"}>{status.replaceAll("_", " ")}</Button></form>)}</div></CardContent></Card>; })}</div>
+        <div className="space-y-3">{cleanSelectedBusinesses.map((selection) => { const business = Array.isArray(selection.businesses) ? selection.businesses[0] : selection.businesses; if (!business) return null; return <Card className="border border-border/60 shadow-sm" key={selection.id}><CardContent className="grid gap-5 p-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-center"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><strong className="text-base">{business.name}</strong><Badge variant={statusVariant(selection.status)}>{selection.status.replaceAll("_", " ")}</Badge><Badge variant="outline">{selection.match_score}% match</Badge></div><p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">{selection.match_explanation}</p></div><OutreachActions action={updateBusinessStatus} currentStatus={selection.status} eventId={event.id} recipientType="business" selectionField="eventBusinessId" selectionId={selection.id} /></CardContent></Card>; })}</div>
       </section>
 
       <section className="space-y-5">
         <div><h2 className="flex items-center gap-2 text-2xl font-bold"><UsersRound className="size-6 text-primary" /> Volunteer matching</h2><p className="mt-1 text-muted-foreground">Matches use imported interests and skills from Giving.sg or the PTS registration form.</p></div>
         <VolunteerImportForm eventId={event.id}/>
         {cleanSelectedVolunteers.length === 0 && <Card className="border-dashed bg-transparent"><CardContent className="p-6 text-sm text-muted-foreground">No volunteers have been shortlisted yet. Import volunteers if needed, then generate the AI shortlist.</CardContent></Card>}
-        <div className="space-y-3">{cleanSelectedVolunteers.map((selection) => { const volunteer = Array.isArray(selection.volunteers) ? selection.volunteers[0] : selection.volunteers; if (!volunteer) return null; const message = volunteerOutreachMessage({ volunteerName: volunteer.full_name, eventName: event.name, eventDate, venue: event.venue }); return <Card className="border-0" key={selection.id}><CardContent className="flex flex-col justify-between gap-5 p-5 lg:flex-row lg:items-center"><div><div className="flex flex-wrap items-center gap-2"><strong>{volunteer.full_name}</strong><Badge variant={statusVariant(selection.status)}>{selection.status.replaceAll("_", " ")}</Badge><Badge variant="outline">Match {selection.match_score}%</Badge></div><p className="mt-2 text-sm text-muted-foreground">{selection.match_explanation}</p></div><div className="flex flex-wrap gap-2"><Button asChild size="sm" variant="outline"><a href={buildWhatsAppUrl(volunteer.phone, message)} rel="noreferrer" target="_blank">Open WhatsApp <ExternalLink className="size-3.5" /></a></Button>{["awaiting_response", "confirmed", "declined"].map((status) => <form action={updateVolunteerStatus} key={status}><input name="eventId" type="hidden" value={event.id} /><input name="eventVolunteerId" type="hidden" value={selection.id} /><input name="status" type="hidden" value={status} /><Button size="sm" type="submit" variant={status === "confirmed" ? "default" : "ghost"}>{status.replaceAll("_", " ")}</Button></form>)}</div></CardContent></Card>; })}</div>
+        <div className="space-y-3">{cleanSelectedVolunteers.map((selection) => { const volunteer = Array.isArray(selection.volunteers) ? selection.volunteers[0] : selection.volunteers; if (!volunteer) return null; return <Card className="border border-border/60 shadow-sm" key={selection.id}><CardContent className="grid gap-5 p-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-center"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><strong className="text-base">{volunteer.full_name}</strong><Badge variant={statusVariant(selection.status)}>{selection.status.replaceAll("_", " ")}</Badge><Badge variant="outline">{selection.match_score}% match</Badge></div><p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">{selection.match_explanation}</p></div><OutreachActions action={updateVolunteerStatus} currentStatus={selection.status} eventId={event.id} recipientType="volunteer" selectionField="eventVolunteerId" selectionId={selection.id} /></CardContent></Card>; })}</div>
       </section>
 
-      {outreachReady && <Card className="border-0 bg-emerald-50"><CardContent className="flex flex-col justify-between gap-4 p-5 text-emerald-900 sm:flex-row sm:items-center"><div className="flex items-center gap-3"><UserRoundCheck className="size-6 shrink-0" /><div><strong>{event.participant_reviewed_at ? "All readiness checks are complete." : "Business and volunteer targets are met."}</strong><p className="text-sm">{event.participant_reviewed_at ? "This event is ready to move to Upcoming." : "Complete the participant review to move this event to Upcoming automatically."}</p></div></div>{event.participant_reviewed_at?<form action={moveReadyEventToUpcoming}><input name="eventId" type="hidden" value={event.id}/><Button type="submit">Move to Upcoming</Button></form>:<Button asChild><Link href={`/coordinator/events/${event.id}/participants`}>Review participants and continue</Link></Button>}</CardContent></Card>}
+      <Card className="border-0"><CardContent className="flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center"><div><strong>Participant list review</strong><p className="mt-1 text-sm text-muted-foreground">Review eligible invitations and registrations, then complete the review from the participant page.</p></div>{event.participant_reviewed_at?<Badge variant="success">Reviewed</Badge>:<Button asChild variant="outline"><Link href={`/coordinator/events/${event.id}/participants`}>Review participant list</Link></Button>}</CardContent></Card>
+
+      <Card className={readyForUpcoming ? "border-0 bg-emerald-50" : "border-0 bg-accent"}>
+        <CardContent className="flex flex-col justify-between gap-5 p-5 sm:flex-row sm:items-center">
+          <div className="flex gap-3">
+            <UserRoundCheck className="mt-0.5 size-6 shrink-0 text-primary" />
+            <div>
+              <strong>{readyForUpcoming ? "All ongoing requirements are complete." : "Complete the ongoing requirements"}</strong>
+              <p className="mt-1 text-sm text-muted-foreground">The event moves only when you select Proceed to Upcoming.</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Badge variant={confirmedBusinesses >= event.business_target ? "success" : "warning"}>Businesses {confirmedBusinesses}/{event.business_target}</Badge>
+                <Badge variant={confirmedVolunteers >= event.volunteer_target ? "success" : "warning"}>Volunteers {confirmedVolunteers}/{event.volunteer_target}</Badge>
+                <Badge variant={event.participant_reviewed_at ? "success" : "warning"}>Participants {event.participant_reviewed_at ? "reviewed" : "pending review"}</Badge>
+              </div>
+            </div>
+          </div>
+          {readyForUpcoming ? (
+            <form action={moveReadyEventToUpcoming}>
+              <input name="eventId" type="hidden" value={event.id}/>
+              <Button type="submit">Proceed to Upcoming</Button>
+            </form>
+          ) : (
+            <Button disabled type="button">Proceed to Upcoming</Button>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

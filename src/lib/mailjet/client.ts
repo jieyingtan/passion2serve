@@ -13,6 +13,15 @@ interface SendEmailInput {
 
 export interface SendEmailResult { messageId: string | null; messageUuid: string | null }
 
+type MailjetResponse = {
+  ErrorMessage?: string;
+  Messages?: Array<{
+    Status?: string;
+    Errors?: Array<{ ErrorMessage?: string }>;
+    To?: Array<{ MessageID?: number; MessageUUID?: string }>;
+  }>;
+};
+
 export function escapeEmailHtml(value: string) {
   return value.replace(/[&<>"']/g, (character) => {
     const entities: Record<string, string> = {
@@ -27,10 +36,8 @@ export function escapeEmailHtml(value: string) {
 }
 
 export function isMailjetConfigured() {
-  return Boolean(
-    process.env.MAILJET_API_KEY &&
-      process.env.MAILJET_SECRET_KEY &&
-      process.env.MAILJET_FROM_EMAIL,
+  return ["MAILJET_API_KEY", "MAILJET_SECRET_KEY", "MAILJET_FROM_EMAIL"].every(
+    (name) => Boolean(process.env[name]?.trim()),
   );
 }
 
@@ -67,10 +74,17 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     cache: "no-store",
   });
 
-  if (!response.ok) {
-    throw new Error(`Mailjet delivery failed with status ${response.status}.`);
+  let payload: MailjetResponse = {};
+  try {
+    payload = await response.json() as MailjetResponse;
+  } catch {
+    // Mailjet can return an empty or non-JSON body for an upstream failure.
   }
-  const payload = await response.json() as { Messages?: Array<{ Status?: string; Errors?: Array<{ ErrorMessage?: string }>; To?: Array<{ MessageID?: number; MessageUUID?: string }> }> };
+
+  if (!response.ok) {
+    const providerMessage = payload.ErrorMessage || payload.Messages?.[0]?.Errors?.[0]?.ErrorMessage;
+    throw new Error(providerMessage || `Mailjet delivery failed with status ${response.status}.`);
+  }
   const message = payload.Messages?.[0];
   if (message?.Status !== "success") {
     throw new Error(message?.Errors?.[0]?.ErrorMessage || "Mailjet did not accept the email.");

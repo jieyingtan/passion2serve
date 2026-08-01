@@ -61,9 +61,17 @@ export function AttendanceScanner({ eventId }: { eventId: string }) {
         body: JSON.stringify({ eventId, token: clean }),
       });
       const body = await response.json();
-      setMessage(response.ok
-        ? `${body.participantName}: attendance ${body.duplicate ? "was already recorded" : "recorded"}.`
-        : body.error);
+      if (response.ok) {
+        const attendanceMessage = `${body.participantName}: attendance ${body.duplicate ? "was already recorded" : "recorded"}.`;
+        const followUpMessage = body.followUp?.error
+          ? ` Attendance is safe, but the automated follow-up failed: ${body.followUp.error}`
+          : body.followUp
+            ? ` Certificate ${body.followUp.certificateNumber} is saved. ${body.followUp.pointsAwarded} points awarded; badges checked. Email: ${body.followUp.emailStatus}.`
+            : "";
+        setMessage(`${attendanceMessage}${followUpMessage}`);
+      } else {
+        setMessage(body.error);
+      }
       if (response.ok) {
         setToken("");
         navigator.vibrate?.(120);

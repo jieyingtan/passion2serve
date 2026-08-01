@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   inviteOrganisationMailingListToEvent,
   inviteParticipantToEvent,
+  resendParticipantInvitation,
 } from "@/server/participants/invite";
 
 export interface InviteParticipantState {
@@ -91,10 +92,10 @@ export async function inviteMailingList(
     revalidatePath(`/coordinator/events/${eventId.data}/participants`);
     return {
       success: result.sent
-        ? `${result.sent} new detailed invitations sent.${result.skipped ? ` ${result.skipped} existing event invitations skipped.` : ""} ${result.pending ? `${result.pending} pending.` : ""}`
+        ? `${result.sent} eligible invitation${result.sent === 1 ? "" : "s"} sent.${result.skipped ? ` ${result.skipped} existing event invitations skipped.` : ""}${result.ineligible ? ` ${result.ineligible} ineligible member${result.ineligible === 1 ? " was" : "s were"} excluded.` : ""} ${result.pending ? `${result.pending} pending.` : ""}`
         : result.skipped === result.total
           ? `All ${result.total} members are already on this event. No duplicate invitations were sent.`
-          : `${result.total - result.skipped} new invitations prepared.${result.skipped ? ` ${result.skipped} duplicates skipped.` : ""} Email delivery is pending until Mailjet is configured.`,
+          : `${result.total - result.skipped} eligible invitations prepared.${result.skipped ? ` ${result.skipped} duplicates skipped.` : ""}${result.ineligible ? ` ${result.ineligible} ineligible member${result.ineligible === 1 ? " was" : "s were"} excluded.` : ""} Email delivery is pending until Mailjet is configured.`,
     };
   } catch (error) {
     return { error: error instanceof Error ? error.message : "The mailing list could not be invited." };
@@ -130,5 +131,17 @@ export async function removeIneligibleParticipant(formData: FormData) {
   const { error } = await admin.from("participant_invitations").delete().eq("id", invitation.id).eq("event_id", parsed.eventId);
   if (error) throw new Error("The participant invitation could not be removed.");
   await admin.from("audit_logs").insert({ actor_id: user.id, action: "event.participant_removed", entity_type: "event", entity_id: parsed.eventId, before_value: { invitationId: invitation.id, participantId: invitation.auth_user_id, email: invitation.email, reason: "course_prerequisites_not_met" } });
+  revalidatePath(`/coordinator/events/${parsed.eventId}/participants`);
+}
+
+export async function resendInvitationEmail(formData: FormData) {
+  const parsed = z.object({
+    eventId: z.string().uuid(),
+    invitationId: z.string().uuid(),
+  }).parse({
+    eventId: formData.get("eventId"),
+    invitationId: formData.get("invitationId"),
+  });
+  await resendParticipantInvitation(parsed);
   revalidatePath(`/coordinator/events/${parsed.eventId}/participants`);
 }

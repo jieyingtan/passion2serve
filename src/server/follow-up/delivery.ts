@@ -31,7 +31,7 @@ export async function sendEventNotice(input: EventNoticeInput) {
           html: `<p>Hello ${escapeEmailHtml(profile.full_name)},</p><p><strong>${escapeEmailHtml(label)}</strong> for ${escapeEmailHtml(event.name)}.</p><p>${escapeEmailHtml(eventDate)}<br>${escapeEmailHtml(event.venue)}</p><p>Open your Passion2Serve account for event details and your membership QR.</p>`,
           customId: delivery?.id, eventPayload: delivery?.id,
         });
-        if (delivery) await admin.from("notification_deliveries").update({ status: "sent", provider_message_id: result.messageId || result.messageUuid, sent_at: new Date().toISOString() }).eq("id", delivery.id);
+        if (delivery) await admin.from("notification_deliveries").update({ status: "sent", provider_message_id: result.messageUuid || result.messageId, sent_at: new Date().toISOString() }).eq("id", delivery.id);
       } catch (error) {
         if (delivery) await admin.from("notification_deliveries").update({ status: "failed", error: error instanceof Error ? error.message : "Mailjet delivery failed." }).eq("id", delivery.id);
       }

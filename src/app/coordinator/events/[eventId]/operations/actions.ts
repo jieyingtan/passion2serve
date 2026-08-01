@@ -8,7 +8,7 @@ import { eventTypes, getDirectoryMatch, type EventType } from "@/lib/events/matc
 import { parseSpreadsheet, splitList } from "@/lib/imports/spreadsheet";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { advanceEventIfReady } from "@/server/events/readiness";
+import { isWhatsAppCloudConfigured, sendWhatsAppTemplate } from "@/lib/whatsapp/client";
 
 const idSchema = z.object({ eventId: z.string().uuid(), entityId: z.string().uuid() });
 const businessStatusSchema = z.enum(["not_contacted", "awaiting_response", "confirmed", "declined"]);
@@ -16,6 +16,12 @@ const volunteerStatusSchema = z.enum(["recommended", "contacted", "awaiting_resp
 
 export interface ImportState { error?: string; success?: string }
 export interface AiShortlistState { error?: string; success?: string }
+export interface OutreachSendState { error?: string; success?: string }
+
+const outreachSendSchema = z.discriminatedUnion("recipientType", [
+  z.object({ recipientType: z.literal("business"), eventId: z.string().uuid(), selectionId: z.string().uuid() }),
+  z.object({ recipientType: z.literal("volunteer"), eventId: z.string().uuid(), selectionId: z.string().uuid() }),
+]);
 
 const aiShortlistSchema = z.object({
   businesses: z.array(z.object({ id: z.string().uuid(), score: z.number().int().min(0).max(100), explanation: z.string().min(8).max(300) })).max(6),
@@ -137,11 +143,24 @@ export async function importVolunteers(_state: ImportState, formData: FormData):
         source: row.source || "Spreadsheet import", active: true,
       };
     });
-    const { error } = await admin.from("volunteers").upsert(parsedRows, { onConflict: "email" });
+    const { data: importedVolunteers, error } = await admin.from("volunteers").upsert(parsedRows, { onConflict: "email" }).select("id,full_name,interests,skills");
     if (error) throw new Error("The volunteer spreadsheet could not be saved.");
-    await admin.from("audit_logs").insert({ action: "volunteers.imported", entity_type: "event", entity_id: event.id, after_value: { count: parsedRows.length, file: file.name } });
+    if (!eventTypes.includes(event.event_type as EventType)) throw new Error("Unsupported event type.");
+    const { data: existingSelections } = await admin.from("event_volunteers").select("volunteer_id").eq("event_id", event.id);
+    const selectedIds = new Set((existingSelections ?? []).map((selection) => selection.volunteer_id));
+    const matchedRows = (importedVolunteers ?? []).flatMap((volunteer) => {
+      if (selectedIds.has(volunteer.id)) return [];
+      const match = getDirectoryMatch(event.event_type as EventType, event.name, [...volunteer.interests, ...volunteer.skills]);
+      if (!match.eligible) return [];
+      return [{ event_id: event.id, volunteer_id: volunteer.id, match_score: match.score, match_explanation: `Matched imported skills and interests: ${match.matchedSkills.join(", ")}.`, status: "awaiting_response", contacted_at: null }];
+    });
+    if (matchedRows.length) {
+      const { error: matchError } = await admin.from("event_volunteers").upsert(matchedRows, { onConflict: "event_id,volunteer_id" });
+      if (matchError) throw new Error("The volunteers were imported, but their event matches could not be displayed.");
+    }
+    await admin.from("audit_logs").insert({ action: "volunteers.imported", entity_type: "event", entity_id: event.id, after_value: { count: parsedRows.length, matched: matchedRows.length, file: file.name } });
     revalidatePath(`/coordinator/events/${event.id}/operations`);
-    return { success: `${parsedRows.length} volunteer${parsedRows.length === 1 ? "" : "s"} imported and added to matching.` };
+    return { success: `${parsedRows.length} volunteer${parsedRows.length === 1 ? "" : "s"} imported. ${matchedRows.length} matching volunteer${matchedRows.length === 1 ? " is" : "s are"} now shown below.` };
   } catch (error) { return { error: error instanceof Error ? error.message : "The spreadsheet could not be imported." }; }
 }
 
@@ -152,11 +171,67 @@ async function authorisedEvent(eventId: string) {
   const admin = createAdminClient();
   const { data: profile } = await admin.from("profiles").select("role").eq("id", user.id).maybeSingle();
   if (profile?.role !== "coordinator") throw new Error("Coordinator access required.");
-  const { data: event } = await admin.from("events").select("id, name, event_type, organisation_id").eq("id", eventId).maybeSingle();
+  const { data: event } = await admin.from("events").select("id, name, event_type, organisation_id, starts_at, venue, beneficiary_organisations(name)").eq("id", eventId).maybeSingle();
   if (!event) throw new Error("Event not found.");
   const { data: assignment } = await admin.from("coordinator_assignments").select("id").eq("coordinator_id", user.id).eq("organisation_id", event.organisation_id).maybeSingle();
   if (!assignment) throw new Error("You are not authorised to manage this event.");
   return { admin, event, supabase };
+}
+
+export async function sendOutreachWhatsApp(_state: OutreachSendState, formData: FormData): Promise<OutreachSendState> {
+  try {
+    const parsed = outreachSendSchema.parse({
+      recipientType: formData.get("recipientType"),
+      eventId: formData.get("eventId"),
+      selectionId: formData.get("selectionId"),
+    });
+    const { admin, event } = await authorisedEvent(parsed.eventId);
+    if (!isWhatsAppCloudConfigured()) throw new Error("WhatsApp Cloud API is not configured.");
+
+    const eventDate = new Intl.DateTimeFormat("en-SG", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Singapore" }).format(new Date(event.starts_at));
+    const beneficiary = Array.isArray(event.beneficiary_organisations) ? event.beneficiary_organisations[0] : event.beneficiary_organisations;
+    const contactedAt = new Date().toISOString();
+
+    if (parsed.recipientType === "business") {
+      const templateName = process.env.WHATSAPP_BUSINESS_OUTREACH_TEMPLATE;
+      if (!templateName) throw new Error("WHATSAPP_BUSINESS_OUTREACH_TEMPLATE is not configured.");
+      const { data: selection } = await admin.from("event_businesses")
+        .select("id, businesses(name, contact_name, phone)")
+        .eq("id", parsed.selectionId).eq("event_id", event.id).maybeSingle();
+      const business = Array.isArray(selection?.businesses) ? selection.businesses[0] : selection?.businesses;
+      if (!selection || !business?.phone) throw new Error("The selected business or its WhatsApp number was not found.");
+      const result = await sendWhatsAppTemplate({
+        to: business.phone,
+        templateName,
+        bodyParameters: [business.contact_name, event.name, beneficiary?.name ?? "our beneficiary organisation", eventDate, event.venue],
+      });
+      const { error } = await admin.from("event_businesses").update({ status: "awaiting_response", contacted_at: contactedAt }).eq("id", selection.id).eq("event_id", event.id);
+      if (error) throw new Error("The message was sent, but the business outreach status could not be updated.");
+      await admin.from("audit_logs").insert({ action: "business.whatsapp_outreach_sent", entity_type: "event_business", entity_id: selection.id, after_value: { event_id: event.id, business_name: business.name, provider: "meta_cloud", message_id: result.messageId, template: templateName } });
+      revalidatePath(`/coordinator/events/${event.id}/operations`);
+      return { success: `Sent to ${business.name}.` };
+    }
+
+    const templateName = process.env.WHATSAPP_VOLUNTEER_OUTREACH_TEMPLATE;
+    if (!templateName) throw new Error("WHATSAPP_VOLUNTEER_OUTREACH_TEMPLATE is not configured.");
+    const { data: selection } = await admin.from("event_volunteers")
+      .select("id, volunteers(full_name, phone)")
+      .eq("id", parsed.selectionId).eq("event_id", event.id).maybeSingle();
+    const volunteer = Array.isArray(selection?.volunteers) ? selection.volunteers[0] : selection?.volunteers;
+    if (!selection || !volunteer?.phone) throw new Error("The selected volunteer or their WhatsApp number was not found.");
+    const result = await sendWhatsAppTemplate({
+      to: volunteer.phone,
+      templateName,
+      bodyParameters: [volunteer.full_name, event.name, eventDate, event.venue],
+    });
+    const { error } = await admin.from("event_volunteers").update({ status: "awaiting_response", contacted_at: contactedAt }).eq("id", selection.id).eq("event_id", event.id);
+    if (error) throw new Error("The message was sent, but the volunteer outreach status could not be updated.");
+    await admin.from("audit_logs").insert({ action: "volunteer.whatsapp_outreach_sent", entity_type: "event_volunteer", entity_id: selection.id, after_value: { event_id: event.id, volunteer_name: volunteer.full_name, provider: "meta_cloud", message_id: result.messageId, template: templateName } });
+    revalidatePath(`/coordinator/events/${event.id}/operations`);
+    return { success: `Sent to ${volunteer.full_name}.` };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "The WhatsApp outreach message could not be sent." };
+  }
 }
 
 export async function addRecommendedBusiness(formData: FormData) {
@@ -204,7 +279,6 @@ export async function updateBusinessStatus(formData: FormData) {
     contacted_at: status === "awaiting_response" ? new Date().toISOString() : undefined,
   }).eq("id", parsed.entityId).eq("event_id", event.id);
   if (error) throw new Error("Business status could not be updated.");
-  await advanceEventIfReady(event.id);
   revalidatePath(`/coordinator/events/${event.id}/operations`);
 }
 
@@ -217,6 +291,5 @@ export async function updateVolunteerStatus(formData: FormData) {
     contacted_at: ["contacted", "awaiting_response"].includes(status) ? new Date().toISOString() : undefined,
   }).eq("id", parsed.entityId).eq("event_id", event.id);
   if (error) throw new Error("Volunteer status could not be updated.");
-  await advanceEventIfReady(event.id);
   revalidatePath(`/coordinator/events/${event.id}/operations`);
 }

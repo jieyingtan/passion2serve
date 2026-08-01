@@ -10,10 +10,17 @@ import { LoginForm } from "./login-form";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; next?: string }>;
+  searchParams: Promise<{ email?: string; error?: string; next?: string }>;
 }) {
-  const { error, next } = await searchParams;
+  const { email, error, next } = await searchParams;
   const nextPath = safeNextPath(next) ?? undefined;
+  const invitedEventId = nextPath
+    ? new URL(nextPath, "http://passion2serve.local").searchParams.get("event")
+    : null;
+  const signupQuery = new URLSearchParams();
+  if (invitedEventId) signupQuery.set("event", invitedEventId);
+  if (email) signupQuery.set("email", email);
+  const participantSignupHref = signupQuery.size ? `/signup?${signupQuery.toString()}` : "/signup";
 
   return (
     <main className="min-h-screen bg-muted/40 px-5 py-10 sm:px-8">
@@ -54,9 +61,9 @@ export default async function LoginPage({
               <CardDescription>Discover events, access your membership pass, and track your progress.</CardDescription>
             </CardHeader>
             <CardContent>
-              <LoginForm nextPath={nextPath} role="participant" />
+              <LoginForm defaultEmail={email} nextPath={nextPath} role="participant" />
               <p className="mt-4 text-center text-sm text-muted-foreground">
-                New participant? <Link className="font-semibold text-primary" href="/signup">Create an account</Link>
+                New participant? <Link className="font-semibold text-primary" href={participantSignupHref}>Create an account</Link>
               </p>
             </CardContent>
           </Card>

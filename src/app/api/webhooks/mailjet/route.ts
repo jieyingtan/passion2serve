@@ -17,6 +17,7 @@ export async function POST(request: Request) {
     await Promise.all([
       admin.from("notification_deliveries").update({ status, provider_message_id: event.MessageID ? String(event.MessageID) : undefined, delivered_at: ["delivered", "read"].includes(status) ? new Date().toISOString() : undefined, error: status === "failed" ? event.error || event.event : null }).eq("id", event.CustomID),
       admin.from("certificates").update({ email_status: status === "failed" ? "failed" : "sent", email_message_id: event.MessageID ? String(event.MessageID) : undefined, email_error: status === "failed" ? event.error || event.event : null }).eq("id", event.CustomID),
+      admin.from("participant_invitations").update({ email_delivery_status: status === "failed" ? "failed" : "sent", email_delivery_error: status === "failed" ? event.error || event.event : null }).eq("id", event.CustomID),
     ]);
   }
   return NextResponse.json({ processed: events.length });

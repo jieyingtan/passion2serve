@@ -16,7 +16,7 @@ export default async function ParticipantLayout({ children }: { children: React.
   ];
 
   return (
-    <AppShell navigation={navigation} roleLabel={text[5]} userName={profile?.fullName ?? "Aisha Rahman"}>
+    <AppShell navigation={navigation} profileHref="/participant/profile" roleLabel={text[5]} userName={profile?.fullName ?? "Aisha Rahman"}>
       {children}
     </AppShell>
   );

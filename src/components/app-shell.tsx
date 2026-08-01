@@ -53,9 +53,10 @@ interface AppShellProps {
   navigation: NavigationItem[];
   roleLabel: string;
   userName: string;
+  profileHref: string;
 }
 
-export function AppShell({ children, navigation, roleLabel, userName }: AppShellProps) {
+export function AppShell({ children, navigation, roleLabel, userName, profileHref }: AppShellProps) {
   const pathname = usePathname();
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
 
@@ -116,13 +117,13 @@ export function AppShell({ children, navigation, roleLabel, userName }: AppShell
             <Button aria-label="Notifications" size="icon" variant="ghost">
               <Bell className="size-5" />
             </Button>
-            <div className="grid size-9 place-items-center rounded-full bg-secondary text-sm font-bold text-secondary-foreground">
+            <Link aria-label="Open profile" className="grid size-9 place-items-center rounded-full bg-secondary text-sm font-bold text-secondary-foreground transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" href={profileHref}>
               {userName
                 .split(" ")
                 .map((part) => part[0])
                 .join("")
                 .slice(0, 2)}
-            </div>
+            </Link>
           </div>
           {mobileNavigationOpen && (
             <div className="absolute inset-x-0 top-16 border-b bg-background p-4 shadow-soft lg:hidden">

@@ -9,6 +9,7 @@
     "lint": "eslint . --max-warnings=0",
     "beneficiaries:seed": "node scripts/seed-beneficiaries.mjs",
     "coordinator:create": "node scripts/create-coordinator.mjs",
+    "whatsapp:templates": "node scripts/create-whatsapp-templates.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

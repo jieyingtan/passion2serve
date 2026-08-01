@@ -59,10 +59,9 @@ export async function markParticipantListReviewed(formData: FormData) {
   const { admin } = await coordinatorEvent(eventId);
   const { error } = await admin.from("events").update({ participant_reviewed_at: new Date().toISOString() }).eq("id", eventId);
   if (error) throw new Error("The participant review could not be saved.");
-  const movedToUpcoming = await advanceEventIfReady(eventId);
   revalidatePath(`/coordinator/events/${eventId}/operations`);
   revalidatePath(`/coordinator/events/${eventId}/lifecycle`);
-  if (movedToUpcoming) redirect("/coordinator/events/upcoming");
+  revalidatePath(`/coordinator/events/${eventId}/participants`);
 }
 
 export async function moveReadyEventToUpcoming(formData: FormData) {
