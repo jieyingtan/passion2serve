@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { isSupabaseConfigured } from "@/lib/config";
 import { formatEventDate, getEventStage, type EventStage } from "@/lib/events/stages";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -13,6 +14,7 @@ import { createClient } from "@/lib/supabase/server";
 import { markParticipantNoShow, markVolunteerAttendance, recordManualAttendance } from "./actions";
 import { AttendanceScanner } from "./attendance-scanner";
 import { ClosureForm } from "./closure-form";
+import { PublicityGenerator } from "./publicity-generator";
 import { TransitionForm } from "./transition-form";
 
 const nextStage: Record<Exclude<EventStage,"archived">,{status:string;label:string}> = {
@@ -22,8 +24,69 @@ const nextStage: Record<Exclude<EventStage,"archived">,{status:string;label:stri
 
 function related<T>(value:T|T[]|null){return Array.isArray(value)?value[0]??null:value;}
 
+function getDemoData(eventId: string) {
+  return {
+    event: {
+      id: eventId,
+      name: "Community Skills Workshop — Digital Literacy",
+      event_type: "skills_training",
+      starts_at: "2026-07-28T09:00:00+08:00",
+      ends_at: "2026-07-28T13:00:00+08:00",
+      venue: "Migrant Community Learning Hub, 12 Geylang Lorong",
+      status: "awaiting_closure" as EventStage,
+      volunteer_target: 15,
+      business_target: 3,
+      participant_reviewed_at: "2026-07-27T14:00:00+08:00",
+    },
+    organisation: { name: "Migrant Community Learning Hub" },
+    history: [
+      { id: "h4", previous_status: "upcoming", new_status: "awaiting_closure", reason: "Event completed successfully", changed_at: "2026-07-28T13:15:00+08:00" },
+      { id: "h3", previous_status: "ongoing", new_status: "upcoming", reason: "All readiness requirements met", changed_at: "2026-07-20T10:00:00+08:00" },
+      { id: "h2", previous_status: "create", new_status: "ongoing", reason: "Outreach started", changed_at: "2026-07-10T09:00:00+08:00" },
+      { id: "h1", previous_status: null, new_status: "create", reason: "Event created", changed_at: "2026-07-08T14:30:00+08:00" },
+    ],
+    report: {
+      participant_attendance: 45,
+      volunteer_attendance: 12,
+      business_participation: 3,
+      beneficiary_reach: 45,
+      outcomes: "45 migrant workers completed digital literacy modules covering email, messaging apps, and online banking.",
+      feedback_summary: "Participants rated the session 4.7/5. Multiple requests for follow-up advanced workshop.",
+      impact_summary: "45 migrant workers gained digital literacy certifications, enabling independent access to government services.",
+      publicity_links: null,
+    },
+    registrationCount: 52,
+    participantAttendance: 45,
+    volunteerAttendance: 12,
+    businesses: 3,
+    confirmedVolunteers: 12,
+    participantRoster: [],
+    volunteerRoster: [],
+    attendanceRecords: [],
+  };
+}
+
 export default async function LifecyclePage({params}:{params:Promise<{eventId:string}>}) {
-  const {eventId}=await params; const supabase=await createClient(); const admin=createAdminClient();
+  const {eventId}=await params;
+
+  if (!isSupabaseConfigured()) {
+    const demo = getDemoData(eventId);
+    const status = demo.event.status;
+    const stage = getEventStage(status);
+
+    return <div className="mx-auto max-w-6xl space-y-7">
+      <div><Link className="inline-flex items-center gap-2 text-sm font-semibold text-primary" href={stage.href}><ArrowLeft className="size-4"/>Back to {stage.label}</Link><div className="mt-5 flex flex-wrap items-end justify-between gap-4"><div><Badge>{stage.label}</Badge><Badge className="ml-2" variant="warning">Demo Mode</Badge><h1 className="mt-2 text-3xl font-bold">{demo.event.name}</h1><p className="mt-2 text-muted-foreground">{demo.organisation.name} · {formatEventDate(demo.event.starts_at)} · {demo.event.venue}</p></div></div></div>
+      <div className="grid gap-4 sm:grid-cols-4">{[["Registrations",demo.registrationCount],["Attendance",demo.participantAttendance],["Businesses",`${demo.businesses}/${demo.event.business_target}`],["Volunteers",`${demo.confirmedVolunteers}/${demo.event.volunteer_target}`]].map(([label,value])=><Card className="border-0" key={String(label)}><CardContent className="p-5"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 text-2xl font-bold">{value}</p></CardContent></Card>)}</div>
+
+      <Card className="border-0"><CardHeader><CardTitle>Closure and impact report</CardTitle><p className="text-sm text-muted-foreground">Attendance and participation totals flow automatically from the event record.</p></CardHeader><CardContent><ClosureForm attendance={{participants:demo.participantAttendance,volunteers:demo.volunteerAttendance,businesses:demo.businesses}} eventId={eventId} report={demo.report}/></CardContent></Card>
+
+      <Card className="border-0"><CardHeader><CardTitle>AI Publicity Generator</CardTitle><p className="text-sm text-muted-foreground">Generate a photorealistic poster and social copy from event impact data.</p></CardHeader><CardContent><PublicityGenerator eventId={eventId}/></CardContent></Card>
+
+      <Card className="border-0"><CardHeader><CardTitle className="flex items-center gap-2"><History className="size-5 text-primary"/>Stage history</CardTitle></CardHeader><CardContent className="space-y-3">{demo.history.map(item=><div className="flex gap-3 rounded-lg border p-3" key={item.id}><Clock3 className="mt-0.5 size-4 text-primary"/><div><p className="font-semibold">{item.previous_status?`${String(item.previous_status).replaceAll("_"," ")} → `:""}{String(item.new_status).replaceAll("_"," ")}</p><p className="text-sm text-muted-foreground">{item.reason} · {formatEventDate(item.changed_at)}</p></div></div>)}</CardContent></Card>
+    </div>;
+  }
+
+  const supabase=await createClient(); const admin=createAdminClient();
   const [
     {data:event},{data:history},{data:report},{count:registrationCount},{data:attendanceRecords},
     {count:businesses},{count:confirmedVolunteers},{data:participantRoster},{data:volunteerRoster},
@@ -55,7 +118,7 @@ export default async function LifecyclePage({params}:{params:Promise<{eventId:st
       <Card className="border-0"><CardHeader><CardTitle className="flex items-center gap-2"><Users className="size-5 text-primary"/>Volunteer attendance</CardTitle></CardHeader><CardContent className="space-y-3">{!volunteerRoster?.length?<p className="rounded-lg border border-dashed p-6 text-center text-muted-foreground">No confirmed volunteers.</p>:volunteerRoster.map(item=>{const volunteer=related(item.volunteers);return <div className="flex flex-col justify-between gap-3 rounded-xl border p-4 sm:flex-row sm:items-center" key={item.id}><div><p className="font-semibold">{volunteer?.full_name??"Volunteer"}</p><p className="text-sm text-muted-foreground">{volunteer?.email}</p></div><div className="flex gap-2">{item.status==="attended"?<Badge variant="success">Attended</Badge>:item.status==="no_show"?<Badge variant="secondary">No-show</Badge>:[['attended','Mark attended'],['no_show','No-show']].map(([next,label])=><form action={markVolunteerAttendance} key={next}><input name="eventId" type="hidden" value={eventId}/><input name="eventVolunteerId" type="hidden" value={item.id}/><input name="status" type="hidden" value={next}/><Button size="sm" type="submit" variant={next==='attended'?'default':'ghost'}>{label}</Button></form>)}</div></div>})}</CardContent></Card>
     </>}
 
-    {status==="awaiting_closure"&&<Card className="border-0"><CardHeader><CardTitle>Closure and impact report</CardTitle><p className="text-sm text-muted-foreground">Attendance and participation totals flow automatically from the event record.</p></CardHeader><CardContent><ClosureForm attendance={{participants:participantAttendance,volunteers:volunteerAttendance,businesses:businesses??0}} eventId={eventId} report={report}/></CardContent></Card>}
+    {status==="awaiting_closure"&&<><Card className="border-0"><CardHeader><CardTitle>Closure and impact report</CardTitle><p className="text-sm text-muted-foreground">Attendance and participation totals flow automatically from the event record.</p></CardHeader><CardContent><ClosureForm attendance={{participants:participantAttendance,volunteers:volunteerAttendance,businesses:businesses??0}} eventId={eventId} report={report}/></CardContent></Card><Card className="border-0"><CardHeader><CardTitle>AI Publicity Generator</CardTitle><p className="text-sm text-muted-foreground">Generate a photorealistic poster and social copy from event impact data.</p></CardHeader><CardContent><PublicityGenerator eventId={eventId}/></CardContent></Card></>}
     {status!=="archived"&&<Card className="border-0"><CardHeader><CardTitle className="flex items-center gap-2"><CheckCircle2 className="size-5 text-primary"/>Progress event</CardTitle></CardHeader><CardContent><p className="mb-4 text-sm text-muted-foreground">Requirements are validated before the event progresses. Overrides require an audited reason.</p><TransitionForm eventId={eventId} label={nextStage[status].label} targetStatus={nextStage[status].status}/></CardContent></Card>}
     <Card className="border-0"><CardHeader><CardTitle className="flex items-center gap-2"><History className="size-5 text-primary"/>Stage history</CardTitle></CardHeader><CardContent className="space-y-3">{(history??[]).map(item=><div className="flex gap-3 rounded-lg border p-3" key={item.id}><Clock3 className="mt-0.5 size-4 text-primary"/><div><p className="font-semibold">{item.previous_status?`${String(item.previous_status).replaceAll("_"," ")} → `:""}{String(item.new_status).replaceAll("_"," ")}</p><p className="text-sm text-muted-foreground">{item.reason||"Stage updated"} · {formatEventDate(item.changed_at)}</p></div></div>)}</CardContent></Card>
   </div>;
