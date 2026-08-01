@@ -4,10 +4,14 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { isSupabaseConfigured } from "@/lib/config";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { generatePublicityDraft, generateVisualConcepts } from "@/server/ai/publicity";
 import { advanceEventIfReady } from "@/server/events/readiness";
 import { processAttendanceFollowUp } from "@/server/follow-up/attendance";
+import type { EventClosureMetadata, PublicityDraft, VisualConcept } from "@/types/publicity";
+import { visualConceptSchema } from "@/types/publicity";
 
 export interface LifecycleActionState { error?: string; success?: string }
 
@@ -134,4 +138,140 @@ export async function saveClosureReport(_state: LifecycleActionState, formData: 
     revalidatePath(`/coordinator/events/${parsed.data.eventId}/lifecycle`);
     return { success: "Closure report saved. The event is ready to archive." };
   } catch (error) { return { error: error instanceof Error ? error.message : "The closure report could not be saved." }; }
+}
+
+// --- AI Publicity Actions ---
+
+export interface ConceptsActionResult {
+  success: boolean;
+  concepts?: VisualConcept[];
+  metadata?: EventClosureMetadata;
+  error?: string;
+}
+
+export async function getClosureConceptsAction(eventId: string): Promise<ConceptsActionResult> {
+  const id = z.string().uuid().safeParse(eventId);
+  if (!id.success) return { success: false, error: "Invalid event ID." };
+
+  try {
+    const metadata: EventClosureMetadata = await (async () => {
+      if (!isSupabaseConfigured()) {
+        return {
+          eventId: id.data,
+          title: "Community Skills Workshop",
+          category: "skills_training",
+          beneficiaryName: "Migrant Community Learning Hub",
+          volunteersAttended: 12,
+          participantsAttended: 45,
+          keyImpactMetric: "45 migrant workers gained digital literacy certifications",
+        };
+      }
+
+      const { admin } = await coordinatorEvent(id.data);
+      const { data: event } = await admin
+        .from("events")
+        .select("id, name, event_type, organisation_id")
+        .eq("id", id.data)
+        .maybeSingle();
+      if (!event) throw new Error("Event not found.");
+
+      const [{ data: org }, { count: volunteersAttended }, { count: participantsAttended }] = await Promise.all([
+        admin.from("beneficiary_organisations").select("name").eq("id", event.organisation_id).maybeSingle(),
+        admin.from("event_volunteers").select("id", { count: "exact", head: true }).eq("event_id", id.data).eq("status", "attended"),
+        admin.from("attendance").select("id", { count: "exact", head: true }).eq("event_id", id.data),
+      ]);
+
+      const { data: closure } = await admin
+        .from("event_closure_reports")
+        .select("impact_summary")
+        .eq("event_id", id.data)
+        .maybeSingle();
+
+      return {
+        eventId: event.id,
+        title: event.name,
+        category: event.event_type,
+        beneficiaryName: org?.name ?? "Community",
+        volunteersAttended: volunteersAttended ?? 0,
+        participantsAttended: participantsAttended ?? 0,
+        keyImpactMetric: closure?.impact_summary ?? "Community engagement and support",
+      };
+    })();
+
+    const concepts = await generateVisualConcepts(metadata);
+    return { success: true, concepts, metadata };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Visual concepts could not be generated." };
+  }
+}
+
+export interface DraftActionResult {
+  success: boolean;
+  draft?: PublicityDraft;
+  error?: string;
+}
+
+export async function generateClosureDraftAction(
+  concept: VisualConcept,
+  metadata: EventClosureMetadata,
+): Promise<DraftActionResult> {
+  const parsedConcept = visualConceptSchema.safeParse(concept);
+  if (!parsedConcept.success) return { success: false, error: "Invalid visual concept." };
+
+  try {
+    if (isSupabaseConfigured()) {
+      await coordinatorEvent(metadata.eventId);
+    }
+    const draft = await generatePublicityDraft(parsedConcept.data, metadata);
+    return { success: true, draft };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "The publicity draft could not be generated." };
+  }
+}
+
+export interface PublishActionResult {
+  success: boolean;
+  error?: string;
+}
+
+export async function publishClosurePublicityAction(
+  eventId: string,
+  caption: string,
+  imageUrl: string,
+): Promise<PublishActionResult> {
+  const id = z.string().uuid().safeParse(eventId);
+  const captionVal = z.string().min(1).safeParse(caption);
+  const imageVal = z.string().url().safeParse(imageUrl);
+  if (!id.success || !captionVal.success || !imageVal.success) {
+    return { success: false, error: "Invalid publish parameters." };
+  }
+
+  try {
+    if (!isSupabaseConfigured()) {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      console.log("[DEMO] Published publicity:", { eventId: id.data, caption: captionVal.data, imageUrl: imageVal.data });
+      return { success: true };
+    }
+
+    const { admin } = await coordinatorEvent(id.data);
+
+    await admin.from("event_closure_reports").update({
+      publicity_links: imageVal.data,
+      publicity_caption: captionVal.data,
+      publicity_published_at: new Date().toISOString(),
+    }).eq("event_id", id.data);
+
+    const { error } = await admin
+      .from("events")
+      .update({ status: "archived" })
+      .eq("id", id.data);
+    if (error) return { success: false, error: "The event could not be archived." };
+
+    revalidatePath("/coordinator/dashboard");
+    revalidatePath("/coordinator/events", "layout");
+    revalidatePath(`/coordinator/events/${id.data}/lifecycle`);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Publication failed." };
+  }
 }
