@@ -2,8 +2,10 @@ import Link from "next/link";
 import { ArrowRight, CalendarCheck, HeartHandshake, Sparkles, UsersRound } from "lucide-react";
 
 import { Brand } from "@/components/brand";
+import { TestimonialsCarousel } from "@/components/testimonials-carousel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { getTestimonials } from "@/server/testimonials";
 
 const roles = [
   {
@@ -22,7 +24,8 @@ const roles = [
   },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const testimonials = await getTestimonials();
   return (
     <main className="relative min-h-screen overflow-hidden px-5 py-6 sm:px-8">
       <div className="absolute -right-32 -top-32 size-96 rounded-full bg-secondary/70 blur-3xl" />
@@ -91,6 +94,8 @@ export default function HomePage() {
             </Card>
           </div>
         </section>
+
+        {testimonials.length > 0 && <TestimonialsCarousel testimonials={testimonials} />}
 
         <section className="grid gap-5 pb-20 md:grid-cols-2">
           {roles.map((role) => {
