@@ -1,0 +1,60 @@
+import { escapeEmailHtml, isMailjetConfigured, sendEmail } from "@/lib/mailjet/client";
+import { buildWhatsAppUrl } from "@/lib/outreach/whatsapp";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { isWhatsAppCloudConfigured, sendWhatsAppTemplate } from "@/lib/whatsapp/client";
+
+interface EventNoticeInput {
+  participantId: string;
+  eventId: string;
+  type: "registration_receipt" | "event_reminder";
+}
+
+export async function sendEventNotice(input: EventNoticeInput) {
+  const admin = createAdminClient();
+  const [{ data: profile }, { data: event }] = await Promise.all([
+    admin.from("profiles").select("full_name,email,phone,email_consent,whatsapp_consent").eq("id", input.participantId).maybeSingle(),
+    admin.from("events").select("name,starts_at,venue").eq("id", input.eventId).maybeSingle(),
+  ]);
+  if (!profile || !event) throw new Error("Notification recipient or event not found.");
+  const eventDate = new Intl.DateTimeFormat("en-SG", { dateStyle: "full", timeStyle: "short", timeZone: "Asia/Singapore" }).format(new Date(event.starts_at));
+  const label = input.type === "event_reminder" ? "Event reminder" : "Registration confirmed";
+  const keyBase = `${input.type}:${input.eventId}:${input.participantId}`;
+
+  if (profile.email_consent && isMailjetConfigured()) {
+    const { data: existing } = await admin.from("notification_deliveries").select("id,status").eq("idempotency_key", `${keyBase}:email`).maybeSingle();
+    if (!existing || !["sent", "delivered", "read"].includes(existing.status)) {
+      const { data: delivery } = await admin.from("notification_deliveries").upsert({ participant_id: input.participantId, event_id: input.eventId, channel: "email", notification_type: input.type, idempotency_key: `${keyBase}:email`, recipient: profile.email, provider: "mailjet", status: "pending", error: null }, { onConflict: "idempotency_key" }).select("id").single();
+      try {
+        const result = await sendEmail({
+          toEmail: profile.email, toName: profile.full_name, subject: `${label}: ${event.name}`,
+          text: `${label} for ${event.name} on ${eventDate} at ${event.venue}. Open your Passion2Serve account for details.`,
+          html: `<p>Hello ${escapeEmailHtml(profile.full_name)},</p><p><strong>${escapeEmailHtml(label)}</strong> for ${escapeEmailHtml(event.name)}.</p><p>${escapeEmailHtml(eventDate)}<br>${escapeEmailHtml(event.venue)}</p><p>Open your Passion2Serve account for event details and your membership QR.</p>`,
+          customId: delivery?.id, eventPayload: delivery?.id,
+        });
+        if (delivery) await admin.from("notification_deliveries").update({ status: "sent", provider_message_id: result.messageId || result.messageUuid, sent_at: new Date().toISOString() }).eq("id", delivery.id);
+      } catch (error) {
+        if (delivery) await admin.from("notification_deliveries").update({ status: "failed", error: error instanceof Error ? error.message : "Mailjet delivery failed." }).eq("id", delivery.id);
+      }
+    }
+  }
+
+  if (profile.whatsapp_consent && profile.phone) {
+    const templateName = input.type === "event_reminder" ? process.env.WHATSAPP_REMINDER_TEMPLATE : process.env.WHATSAPP_REGISTRATION_TEMPLATE;
+    if (isWhatsAppCloudConfigured() && templateName) {
+      const { data: existing } = await admin.from("notification_deliveries").select("id,status").eq("idempotency_key", `${keyBase}:whatsapp`).maybeSingle();
+      if (!existing || !["sent", "delivered", "read"].includes(existing.status)) {
+        const { data: delivery } = await admin.from("notification_deliveries").upsert({ participant_id: input.participantId, event_id: input.eventId, channel: "whatsapp", notification_type: input.type, idempotency_key: `${keyBase}:whatsapp`, recipient: profile.phone, provider: "meta_cloud", status: "pending", error: null }, { onConflict: "idempotency_key" }).select("id").single();
+        try {
+          const result = await sendWhatsAppTemplate({ to: profile.phone, templateName, bodyParameters: [profile.full_name, event.name, eventDate, event.venue] });
+          if (delivery) await admin.from("notification_deliveries").update({ status: "sent", provider_message_id: result.messageId, sent_at: new Date().toISOString() }).eq("id", delivery.id);
+        } catch (error) {
+          if (delivery) await admin.from("notification_deliveries").update({ status: "failed", error: error instanceof Error ? error.message : "WhatsApp delivery failed." }).eq("id", delivery.id);
+        }
+      }
+    }
+  }
+}
+
+export function buildAttendanceAcknowledgementUrl(phone: string, name: string, eventName: string) {
+  return buildWhatsAppUrl(phone, `Hi ${name}, thank you for completing ${eventName} with Passion2Serve. Your attendance has been recorded and your named certificate is available in your profile.`);
+}

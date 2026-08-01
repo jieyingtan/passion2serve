@@ -1,0 +1,16 @@
+import { CalendarDays, CalendarPlus, Clock3, MapPin } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { createClient } from "@/lib/supabase/server";
+
+export default async function ParticipantCalendarPage() {
+  const supabase=await createClient(); const {data:{user}}=await supabase.auth.getUser();
+  const {data:registrations}=user?await supabase.from("registrations").select("id,status,events(id,name,starts_at,ends_at,venue,event_type,beneficiary_organisations(name))").eq("participant_id",user.id).in("status",["registered","confirmed","waitlisted"]).order("created_at"):{data:[]};
+  const entries=(registrations??[]).map((registration)=>({registration,event:Array.isArray(registration.events)?registration.events[0]:registration.events})).filter((entry)=>entry.event).sort((a,b)=>new Date(a.event!.starts_at).getTime()-new Date(b.event!.starts_at).getTime());
+  return <div className="mx-auto max-w-6xl space-y-8"><div><h1 className="text-3xl font-bold tracking-tight">My calendar</h1><p className="mt-2 text-muted-foreground">Your registered events, times, venues, and calendar downloads.</p></div>
+    {!entries.length?<Card className="border-0"><CardContent className="grid min-h-[360px] place-items-center p-10 text-center"><div><CalendarDays className="mx-auto size-12 text-primary"/><h2 className="mt-5 text-xl font-bold">No registered events</h2><p className="mt-2 text-muted-foreground">Register from Discover events to build your calendar.</p></div></CardContent></Card>:
+    <div className="space-y-4">{entries.map(({registration,event})=>{const organisation=Array.isArray(event!.beneficiary_organisations)?event!.beneficiary_organisations[0]:event!.beneficiary_organisations; const date=new Date(event!.starts_at);return <Card className="border-0" key={registration.id}><CardContent className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center"><div className="grid size-16 shrink-0 place-items-center rounded-2xl bg-primary text-center text-primary-foreground"><span className="text-xs uppercase">{date.toLocaleDateString("en-SG",{month:"short",timeZone:"Asia/Singapore"})}</span><strong className="-mt-3 text-2xl">{date.toLocaleDateString("en-SG",{day:"numeric",timeZone:"Asia/Singapore"})}</strong></div><div className="flex-1"><div className="flex flex-wrap items-center gap-2"><h2 className="text-lg font-bold">{event!.name}</h2><Badge variant={registration.status==="waitlisted"?"warning":"success"}>{registration.status}</Badge></div><p className="mt-1 text-sm text-muted-foreground">{organisation?.name} · {event!.event_type}</p><div className="mt-3 flex flex-wrap gap-4 text-sm"><span className="flex items-center gap-1.5"><Clock3 className="size-4 text-primary"/>{new Intl.DateTimeFormat("en-SG",{dateStyle:"medium",timeStyle:"short",timeZone:"Asia/Singapore"}).format(date)}</span><span className="flex items-center gap-1.5"><MapPin className="size-4 text-primary"/>{event!.venue}</span></div></div>{registration.status!=="waitlisted"&&<Button asChild variant="outline"><a href={`/api/calendar/${event!.id}`}><CalendarPlus className="size-4"/>Add to calendar</a></Button>}</CardContent></Card>})}</div>}
+  </div>;
+}
