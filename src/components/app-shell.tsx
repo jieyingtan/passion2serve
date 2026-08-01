@@ -53,9 +53,10 @@ interface AppShellProps {
   navigation: NavigationItem[];
   roleLabel: string;
   userName: string;
+  sidebarSlot?: React.ReactNode;
 }
 
-export function AppShell({ children, navigation, roleLabel, userName }: AppShellProps) {
+export function AppShell({ children, navigation, roleLabel, userName, sidebarSlot }: AppShellProps) {
   const pathname = usePathname();
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
 
@@ -67,6 +68,7 @@ export function AppShell({ children, navigation, roleLabel, userName }: AppShell
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Workspace</p>
           <p className="mt-1 font-semibold">{roleLabel}</p>
         </div>
+        {sidebarSlot}
         <nav aria-label={`${roleLabel} navigation`} className="mt-6 flex-1 space-y-1">
           {navigation.map((item) => {
             const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
