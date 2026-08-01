@@ -37,14 +37,14 @@ const stageLabels = {
   archived: "Archived",
 };
 const stageStyles = {
-  create: "border-slate-400 bg-slate-50 text-slate-800 hover:bg-slate-100",
+  create: "border-sky-500 bg-sky-50 text-sky-950 hover:bg-sky-100",
   ongoing: "border-amber-500 bg-amber-50 text-amber-950 hover:bg-amber-100",
   upcoming: "border-emerald-600 bg-emerald-50 text-emerald-950 hover:bg-emerald-100",
   awaiting_closure: "border-violet-500 bg-violet-50 text-violet-950 hover:bg-violet-100",
   archived: "border-slate-500 bg-slate-100 text-slate-700 hover:bg-slate-200",
 };
 const legendDots = {
-  create: "bg-slate-400",
+  create: "bg-sky-500",
   ongoing: "bg-amber-500",
   upcoming: "bg-emerald-600",
   awaiting_closure: "bg-violet-500",
