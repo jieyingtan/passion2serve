@@ -17,7 +17,7 @@ interface Props {
 }
 
 const FIELD_CLASS =
-  'h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm ' +
+  'h-11 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm sm:h-10 ' +
   'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50'
 
 const LABEL_CLASS = 'text-xs font-medium text-muted-foreground'
@@ -61,7 +61,7 @@ export function AnalyticsFilters({ filters, options }: Props) {
     <form
       onSubmit={apply}
       aria-label="Filter archived analytics"
-      className="grid grid-cols-2 gap-3 rounded-lg border bg-card p-4 md:grid-cols-4 lg:grid-cols-7"
+      className="grid grid-cols-1 gap-3 rounded-lg border bg-card p-4 min-[520px]:grid-cols-2 md:grid-cols-4 lg:grid-cols-7"
     >
       <div className="space-y-1">
         <label className={LABEL_CLASS} htmlFor="from">
@@ -152,14 +152,14 @@ export function AnalyticsFilters({ filters, options }: Props) {
         </select>
       </div>
 
-      <div className="col-span-2 flex items-end gap-2 md:col-span-4 lg:col-span-7">
-        <Button type="submit" disabled={isPending}>
+      <div className="grid grid-cols-2 items-end gap-2 min-[520px]:col-span-2 sm:flex md:col-span-4 lg:col-span-7">
+        <Button className="w-full sm:w-auto" type="submit" disabled={isPending}>
           {isPending ? 'Updating…' : 'Apply filters'}
         </Button>
-        <Button type="button" variant="ghost" onClick={reset} disabled={isPending}>
+        <Button className="w-full sm:w-auto" type="button" variant="ghost" onClick={reset} disabled={isPending}>
           Reset
         </Button>
-        <Button asChild variant="outline" className="ml-auto">
+        <Button asChild variant="outline" className="col-span-2 w-full sm:ml-auto sm:w-auto">
           <a href={exportHref} download>
             Download full report
           </a>

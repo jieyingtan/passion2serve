@@ -31,7 +31,7 @@ export default async function ParticipantPassPage({
 
   return (
     <div className="mx-auto max-w-5xl">
-      <h1 className="text-3xl font-bold tracking-tight">{t.pass.title}</h1>
+      <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t.pass.title}</h1>
       <p className="mt-2 text-muted-foreground">{t.pass.subtitle}</p>
       {query.activated === "1" && (
         <p className="mt-5 rounded-xl bg-emerald-100 px-4 py-3 text-sm font-semibold text-emerald-800" role="status">
@@ -40,7 +40,7 @@ export default async function ParticipantPassPage({
       )}
       <div className="mt-8 grid gap-6 lg:grid-cols-[380px_1fr]">
         <Card className="overflow-hidden border-0 bg-primary text-primary-foreground">
-          <CardContent className="p-7">
+          <CardContent className="p-5 sm:p-7">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary-foreground/70">Passion2Serve</p>
@@ -80,7 +80,7 @@ export default async function ParticipantPassPage({
 
         <div className="space-y-5">
           <Card className="border-0">
-            <CardContent className="p-7">
+            <CardContent className="p-5 sm:p-7">
               <h2 className="text-xl font-bold">{t.pass.alwaysReady}</h2>
               <p className="mt-2 leading-7 text-muted-foreground">
                 {t.pass.alwaysReadyDesc}
@@ -93,20 +93,20 @@ export default async function ParticipantPassPage({
                   </li>
                 ))}
               </ul>
-              <div className="mt-7 flex flex-wrap gap-3">
+              <div className="mt-7 grid gap-3 sm:flex sm:flex-wrap">
                 {pass?.share_url ? (
-                  <Button asChild>
+                  <Button asChild className="w-full sm:w-auto">
                     <a href={pass.share_url} rel="noreferrer" target="_blank"><Download className="size-4" /> {t.pass.addAppleWallet}</a>
                   </Button>
                 ) : (
-                  <Button disabled><Download className="size-4" /> {t.pass.addAppleWallet}</Button>
+                  <Button className="w-full sm:w-auto" disabled><Download className="size-4" /> {t.pass.addAppleWallet}</Button>
                 )}
                 {pass?.google_save_url ? (
-                  <Button asChild variant="outline">
+                  <Button asChild className="w-full sm:w-auto" variant="outline">
                     <a href={pass.google_save_url} rel="noreferrer" target="_blank"><Download className="size-4" /> {t.pass.addGoogleWallet}</a>
                   </Button>
                 ) : (
-                  <Button disabled variant="outline"><Download className="size-4" /> {t.pass.addGoogleWallet}</Button>
+                  <Button className="w-full sm:w-auto" disabled variant="outline"><Download className="size-4" /> {t.pass.addGoogleWallet}</Button>
                 )}
               </div>
               {!pass?.share_url && !pass?.google_save_url && <WalletAction t={t} />}

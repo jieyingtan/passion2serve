@@ -9,7 +9,7 @@ export default async function CoordinatorCalendarPage() {
     <div className="mx-auto max-w-7xl space-y-6">
       <div>
         <p className="text-sm font-semibold text-primary">Coordinator event pipeline</p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight">Calendar</h1>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">Calendar</h1>
         <p className="mt-2 text-muted-foreground">Plan delivery dates and spot events that still need attention.</p>
       </div>
       {error ? (

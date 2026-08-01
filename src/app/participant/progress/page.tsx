@@ -70,7 +70,7 @@ export default async function ParticipantProgressPage() {
     <div className="mx-auto max-w-6xl space-y-8">
       <div>
         <span className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1.5 text-sm font-semibold text-primary"><Route className="size-4" />{t.progress.badge}</span>
-        <h1 className="mt-4 text-3xl font-bold tracking-tight">{t.progress.title}</h1>
+        <h1 className="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">{t.progress.title}</h1>
         <p className="mt-2 text-muted-foreground">{t.progress.subtitle}</p>
       </div>
 

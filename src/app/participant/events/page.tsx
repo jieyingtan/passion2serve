@@ -80,8 +80,8 @@ export default async function ParticipantEventsPage({
         return (
           <Card className={`overflow-hidden border-0 ${query.event === event.id ? "ring-2 ring-primary" : ""}`} key={event.id}>
             <div className={`h-2 ${invited ? "bg-secondary" : "bg-primary"}`} />
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between gap-3">
+            <CardContent className="p-5 sm:p-6">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <Badge variant={invited || registrationStatus ? "success" : "warning"}>
                   {invited && !registrationStatus ? <MailCheck className="mr-1 size-3" /> : registrationStatus ? <CheckCircle2 className="mr-1 size-3" /> : null}
                   {statusLabel}
@@ -89,7 +89,7 @@ export default async function ParticipantEventsPage({
                 <span className="text-xs font-semibold text-muted-foreground">{event.status.replaceAll("_", " ")}</span>
               </div>
               <p className="mt-6 text-xs font-bold uppercase tracking-wider text-primary">{event.event_type}</p>
-              <h2 className="mt-2 min-h-14 text-xl font-bold">{displayName}</h2>
+              <h2 className="mt-2 text-xl font-bold lg:min-h-14">{displayName}</h2>
               <p className="mt-2 text-sm font-semibold text-muted-foreground">{organisation?.name}</p>
               {displayDescription && <p className="mt-3 text-sm text-muted-foreground">{displayDescription}</p>}
               <div className="mt-5 space-y-2 text-sm text-muted-foreground">
@@ -123,7 +123,7 @@ export default async function ParticipantEventsPage({
         <div className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1.5 text-sm font-semibold text-primary">
           <Sparkles className="size-4" /> {t.discover.badge}
         </div>
-        <h1 className="mt-4 text-3xl font-bold tracking-tight">{t.discover.title}</h1>
+        <h1 className="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">{t.discover.title}</h1>
         <p className="mt-2 text-muted-foreground">{t.discover.subtitle}</p>
         {query.signup === "1" && (
           <p className="mt-5 rounded-xl bg-emerald-100 px-4 py-3 text-sm font-semibold text-emerald-800" role="status">

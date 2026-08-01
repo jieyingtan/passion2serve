@@ -3,8 +3,8 @@ import { join } from "node:path";
 
 const PAGE_WIDTH = 842;
 const PAGE_HEIGHT = 595;
-const TEMPLATE_WIDTH = 1492;
-const TEMPLATE_HEIGHT = 1054;
+const TEMPLATE_WIDTH = 1685;
+const TEMPLATE_HEIGHT = 1191;
 
 function pdfEscape(value: string) {
   return value.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)").replace(/[^\x20-\x7e]/g, "?");
@@ -17,11 +17,13 @@ function fittedSize(value: string, preferred: number, minimum: number, maximumWi
     : Math.max(minimum, Math.floor(preferred * maximumWidth / estimatedWidth));
 }
 
-function centredText(value: string, y: number, preferredSize: number, minimumSize = 10, maximumWidth = 680, font = "F1") {
-  const size = fittedSize(value, preferredSize, minimumSize, maximumWidth);
+function certificateText(value: string, y: number, preferredSize: number, minimumSize = 10, font = "F1") {
+  const left = 285;
+  const right = 765;
+  const size = fittedSize(value, preferredSize, minimumSize, right - left);
   const estimatedWidth = value.length * size * 0.56;
-  const x = Math.max(52, (PAGE_WIDTH - estimatedWidth) / 2);
-  return `BT /${font} ${size} Tf 0.09 0.32 0.29 rg 1 0 0 1 ${x.toFixed(1)} ${y} Tm (${pdfEscape(value)}) Tj ET`;
+  const x = left + Math.max(0, (right - left - estimatedWidth) / 2);
+  return `BT /${font} ${size} Tf 0.08 0.16 0.29 rg 1 0 0 1 ${x.toFixed(1)} ${y} Tm (${pdfEscape(value)}) Tj ET`;
 }
 
 function buildPdf(objects: Buffer[]) {
@@ -48,15 +50,16 @@ function buildPdf(objects: Buffer[]) {
 }
 
 export function buildCertificatePdf(input: { participantName: string; eventName: string; eventDate: string; certificateNumber: string }) {
-  const template = readFileSync(join(process.cwd(), "public", "certificates", "passion2serve-certificate-template.jpg"));
+  const template = readFileSync(join(process.cwd(), "public", "certificates", "passion2serve-certificate-template-v2.jpg"));
   const stream = [
     `q ${PAGE_WIDTH} 0 0 ${PAGE_HEIGHT} 0 0 cm /Im1 Do Q`,
-    centredText("This certificate is proudly presented to", 312, 12, 10, 560, "F1"),
-    centredText(input.participantName, 278, 27, 16, 670, "F2"),
-    centredText("for participating in", 238, 12, 10, 560, "F1"),
-    centredText(input.eventName, 205, 19, 12, 650, "F2"),
-    centredText(input.eventDate, 173, 12, 10, 500, "F1"),
-    centredText(`Certificate No. ${input.certificateNumber}`, 130, 9, 8, 500, "F1"),
+    // Remove the source template's event/date placeholders before drawing the
+    // participant-specific values. The recipient line and gold rule remain.
+    "q 1 1 1 rg 285 188 480 58 re f Q",
+    certificateText(input.participantName, 276, 27, 16, "F2"),
+    certificateText(`For participating in the ${input.eventName}`, 220, 13, 10, "F1"),
+    certificateText(`on ${input.eventDate}.`, 199, 13, 10, "F1"),
+    certificateText(`Certificate No. ${input.certificateNumber}`, 31, 8, 7, "F1"),
   ].join("\n");
   const streamBuffer = Buffer.from(stream);
 

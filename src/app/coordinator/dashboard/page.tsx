@@ -80,10 +80,10 @@ export default async function CoordinatorDashboardPage() {
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <p className="text-sm font-semibold text-primary">{today}</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">Event workspace</h1>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">Event workspace</h1>
           <p className="mt-2 text-muted-foreground">Focus on what needs action and keep delivery on schedule.</p>
         </div>
-        <Button asChild><Link href="/coordinator/events/new"><Plus className="size-4" />Create event</Link></Button>
+        <Button asChild className="w-full sm:w-auto"><Link href="/coordinator/events/new"><Plus className="size-4" />Create event</Link></Button>
       </div>
 
       {eventsError && <DashboardError>Dashboard events could not be loaded: {eventsError}</DashboardError>}
@@ -127,13 +127,13 @@ export default async function CoordinatorDashboardPage() {
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.75fr)_minmax(300px,1fr)]">
         <Card className="border-0">
-          <CardHeader className="flex-row items-start justify-between gap-4">
+          <CardHeader className="flex-row items-start justify-between gap-4 p-5 sm:p-6">
             <div><CardTitle>Action required</CardTitle><p className="mt-1 text-sm text-muted-foreground">Prioritised by lifecycle stage and event date.</p></div>
             <Badge variant={needsAttention.length ? "warning" : "success"}>{needsAttention.length || "All clear"}</Badge>
           </CardHeader>
           <CardContent className="space-y-3">
             {!needsAttention.length ? (
-              <div className="rounded-xl border border-dashed p-10 text-center"><CheckCircle2 className="mx-auto size-8 text-emerald-600" /><p className="mt-3 font-bold">No outstanding actions</p><p className="mt-1 text-sm text-muted-foreground">Your active events are ready for their next stage.</p></div>
+              <div className="rounded-xl border border-dashed p-7 text-center sm:p-10"><CheckCircle2 className="mx-auto size-8 text-emerald-600" /><p className="mt-3 font-bold">No outstanding actions</p><p className="mt-1 text-sm text-muted-foreground">Your active events are ready for their next stage.</p></div>
             ) : needsAttention.slice(0, 5).map((event) => (
               <div className="rounded-xl border p-4" key={event.id}>
                 <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">

@@ -42,12 +42,12 @@ export default async function ParticipantCalendarPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">{t.calendar.title}</h1>
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t.calendar.title}</h1>
         <p className="mt-2 text-muted-foreground">{t.calendar.subtitle}</p>
       </div>
       {!entries.length ? (
         <Card className="border-0">
-          <CardContent className="grid min-h-[360px] place-items-center p-10 text-center">
+          <CardContent className="grid min-h-[280px] place-items-center p-7 text-center sm:min-h-[360px] sm:p-10">
             <div>
               <CalendarDays className="mx-auto size-12 text-primary" />
               <h2 className="mt-5 text-xl font-bold">{t.calendar.noEvents}</h2>
@@ -68,7 +68,7 @@ export default async function ParticipantCalendarPage() {
             const displayVenue = tr?.venue ?? event!.venue;
             return (
               <Card className="border-0" key={registration.id}>
-                <CardContent className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center">
+                <CardContent className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:p-6">
                   <div className="grid size-16 shrink-0 place-items-center rounded-2xl bg-primary text-center text-primary-foreground">
                     <span className="text-xs uppercase">{dateShort.month}</span>
                     <strong className="-mt-3 text-2xl">{dateShort.day}</strong>
@@ -95,7 +95,7 @@ export default async function ParticipantCalendarPage() {
                     </div>
                   </div>
                   {registration.status !== "waitlisted" && (
-                    <Button asChild variant="outline">
+                    <Button asChild className="w-full sm:w-auto" variant="outline">
                       <a href={`/api/calendar/${event!.id}`}>
                         <CalendarPlus className="size-4" />
                         {t.calendar.addToCalendar}

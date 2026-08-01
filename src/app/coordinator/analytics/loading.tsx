@@ -1,6 +1,6 @@
 export default function AnalyticsLoading() {
   return (
-    <div className="space-y-6 p-4 md:p-6" aria-busy="true" aria-live="polite">
+    <div className="mx-auto max-w-7xl space-y-6" aria-busy="true" aria-live="polite">
       <span className="sr-only">Loading impact analytics</span>
 
       <div className="space-y-2">

@@ -231,16 +231,16 @@ export function CoordinatorCalendar({ events, todayKey }: { events: CalendarEven
     <Card className="border-0 shadow-soft">
       <CardContent className="space-y-5 p-4 sm:p-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex items-center gap-2">
-            {view !== "list" && <>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <h2 className="text-xl font-bold sm:order-2" aria-live="polite">{title}</h2>
+            {view !== "list" && <div className="flex items-center gap-2 sm:order-1">
               <Button aria-label="Previous period" onClick={() => move(-1)} size="icon" variant="outline"><ChevronLeft className="size-4" /></Button>
               <Button onClick={() => setAnchorKey(todayKey)} variant="outline">Today</Button>
               <Button aria-label="Next period" onClick={() => move(1)} size="icon" variant="outline"><ChevronRight className="size-4" /></Button>
-            </>}
-            <h2 className="ml-2 text-xl font-bold" aria-live="polite">{title}</h2>
+            </div>}
           </div>
-          <div className="inline-flex w-fit rounded-lg border bg-background p-1" aria-label="Calendar view">
-            {views.map((item) => <button className={cn("rounded-md px-3 py-1.5 text-sm font-semibold transition-colors", view === item.value ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent")} key={item.value} onClick={() => setView(item.value)} type="button">{item.label}</button>)}
+          <div className="grid w-full grid-cols-4 rounded-lg border bg-background p-1 sm:w-fit" aria-label="Calendar view">
+            {views.map((item) => <button className={cn("min-h-10 rounded-md px-2 py-1.5 text-sm font-semibold transition-colors sm:px-3", view === item.value ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent")} key={item.value} onClick={() => setView(item.value)} type="button">{item.label}</button>)}
           </div>
         </div>
 

@@ -1,4 +1,5 @@
 import { getRequiredEnv } from "@/lib/config";
+import { walletPassArtwork } from "@/lib/walletwallet/artwork";
 
 interface WalletPassInput {
   barcodeValue: string;
@@ -16,6 +17,23 @@ export function isWalletWalletConfigured() {
   return Boolean(process.env.WALLETWALLET_API_KEY);
 }
 
+export function buildWalletPassPayload(input: WalletPassInput) {
+  return {
+    barcodeValue: input.barcodeValue,
+    barcodeFormat: "QR",
+    logoText: "Passion2Serve",
+    organizationName: "Passion2Serve",
+    colorPreset: "blue",
+    color: "#c8e8ee",
+    ...walletPassArtwork,
+    primaryFields: [{ label: "PARTICIPANT", value: input.fullName }],
+    secondaryFields: [{ label: "STATUS", value: "Active" }],
+    backFields: [
+      { label: "USE", value: "Present this pass after completing an event to record attendance." },
+    ],
+  };
+}
+
 export async function createWalletPass(input: WalletPassInput): Promise<WalletWalletResponse> {
   const response = await fetch("https://api.walletwallet.dev/api/passes", {
     method: "POST",
@@ -23,20 +41,7 @@ export async function createWalletPass(input: WalletPassInput): Promise<WalletWa
       Authorization: `Bearer ${getRequiredEnv("WALLETWALLET_API_KEY")}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      title: "Passion2Serve Membership",
-      organizationName: "Passion2Serve",
-      logoText: "Passion2Serve",
-      description: "Passion2Serve participant membership pass",
-      barcodeFormat: "QR",
-      barcodeValue: input.barcodeValue,
-      colorPreset: "green",
-      primaryFields: [{ label: "MEMBER", value: input.fullName }],
-      secondaryFields: [{ label: "STATUS", value: "Active participant" }],
-      backFields: [
-        { label: "USE", value: "Present this pass after completing an event to record attendance." },
-      ],
-    }),
+    body: JSON.stringify(buildWalletPassPayload(input)),
     cache: "no-store",
   });
 
@@ -46,4 +51,3 @@ export async function createWalletPass(input: WalletPassInput): Promise<WalletWa
 
   return (await response.json()) as WalletWalletResponse;
 }
-

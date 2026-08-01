@@ -65,12 +65,12 @@ export function ChartFrame({
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+      <CardHeader className="flex flex-col items-stretch justify-between gap-4 space-y-0 sm:flex-row sm:items-start">
         <div className="space-y-1">
           <CardTitle className="text-base">{title}</CardTitle>
           <CardDescription>{description}</CardDescription>
         </div>
-        <div className="flex shrink-0 gap-2">
+        <div className="grid shrink-0 grid-cols-2 gap-2 sm:flex">
           <Button
             variant="ghost"
             size="sm"
@@ -94,7 +94,7 @@ export function ChartFrame({
             <figure
               role="img"
               aria-labelledby={summaryId}
-              className="h-[280px] w-full [&_svg]:overflow-visible"
+              className="h-[240px] w-full sm:h-[280px] [&_svg]:overflow-visible"
             >
               {children}
             </figure>

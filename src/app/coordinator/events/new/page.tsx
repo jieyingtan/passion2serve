@@ -17,7 +17,7 @@ export default async function CreateEventPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-8">
       <p className="text-sm font-semibold text-primary">Create</p>
-      <h1 className="mt-1 text-3xl font-bold tracking-tight">Plan a new event</h1>
+      <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">Plan a new event</h1>
       <p className="mt-2 text-muted-foreground">Add the essentials and review matching recommendations before outreach.</p>
       <EventStageTabs active="create" />
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">

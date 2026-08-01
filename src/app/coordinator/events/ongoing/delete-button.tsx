@@ -25,7 +25,7 @@ export function DeleteEventButton({ eventId, eventName }: { eventId: string; eve
 
   if (!confirming) {
     return (
-      <Button onClick={() => setConfirming(true)} size="sm" variant="ghost" className="text-destructive hover:text-destructive">
+      <Button onClick={() => setConfirming(true)} size="sm" variant="ghost" className="w-full text-destructive hover:text-destructive min-[520px]:w-auto">
         <Trash2 className="size-4" />
         Delete
       </Button>
@@ -33,7 +33,7 @@ export function DeleteEventButton({ eventId, eventName }: { eventId: string; eve
   }
 
   return (
-    <form action={action} className="inline-flex items-center gap-2">
+    <form action={action} className="flex flex-col gap-2 rounded-lg bg-destructive/5 p-2 min-[520px]:flex-row min-[520px]:items-center">
       <span className="text-sm text-destructive">Delete {eventName}?</span>
       <Button disabled={pending} size="sm" type="submit" variant="ghost" className="text-destructive hover:text-destructive">
         {pending ? "Deleting…" : "Yes, delete"}

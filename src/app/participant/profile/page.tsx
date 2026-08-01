@@ -73,7 +73,7 @@ export default async function ParticipantProfilePage() {
         <span className="inline-grid size-11 place-items-center rounded-xl bg-primary text-primary-foreground">
           <UserRound className="size-5" />
         </span>
-        <h1 className="mt-4 text-3xl font-bold">{t.profile.title}</h1>
+        <h1 className="mt-4 text-2xl font-bold sm:text-3xl">{t.profile.title}</h1>
         <p className="mt-2 text-muted-foreground">{t.profile.subtitle}</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-3">

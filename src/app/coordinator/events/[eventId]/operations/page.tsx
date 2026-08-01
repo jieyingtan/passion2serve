@@ -127,8 +127,8 @@ export default async function EventOperationsPage({ params }: { params: Promise<
       <div>
         <Link className="inline-flex items-center gap-2 text-sm font-semibold text-primary" href={stage.href}><ArrowLeft className="size-4" /> Back to {stage.label} events</Link>
         <div className="mt-5 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-          <div><p className="text-sm font-semibold text-primary">Ongoing event operations</p><h1 className="mt-1 text-3xl font-bold tracking-tight">{event.name}</h1><p className="mt-2 text-muted-foreground">{organisation?.name} · {eventDate} · {event.venue}</p></div>
-          <div className="flex flex-wrap gap-2"><Button asChild variant="outline"><Link href={`/coordinator/events/${event.id}/edit`}><Pencil className="size-4"/>Edit requirements</Link></Button><Button asChild variant="outline"><Link href={`/coordinator/events/${event.id}/participants`}>Manage participants</Link></Button></div>
+          <div><p className="text-sm font-semibold text-primary">Ongoing event operations</p><h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{event.name}</h1><p className="mt-2 text-muted-foreground">{organisation?.name} · {eventDate} · {event.venue}</p></div>
+          <div className="grid gap-2 sm:flex sm:flex-wrap"><Button asChild className="w-full sm:w-auto" variant="outline"><Link href={`/coordinator/events/${event.id}/edit`}><Pencil className="size-4"/>Edit requirements</Link></Button><Button asChild className="w-full sm:w-auto" variant="outline"><Link href={`/coordinator/events/${event.id}/participants`}>Manage participants</Link></Button></div>
         </div>
       </div>
 
@@ -169,12 +169,12 @@ export default async function EventOperationsPage({ params }: { params: Promise<
             </div>
           </div>
           {readyForUpcoming ? (
-            <form action={moveReadyEventToUpcoming}>
+            <form action={moveReadyEventToUpcoming} className="w-full sm:w-auto">
               <input name="eventId" type="hidden" value={event.id}/>
-              <Button type="submit">Proceed to Upcoming</Button>
+              <Button className="w-full sm:w-auto" type="submit">Proceed to Upcoming</Button>
             </form>
           ) : (
-            <Button disabled type="button">Proceed to Upcoming</Button>
+            <Button className="w-full sm:w-auto" disabled type="button">Proceed to Upcoming</Button>
           )}
         </CardContent>
       </Card>

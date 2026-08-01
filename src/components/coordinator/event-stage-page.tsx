@@ -34,10 +34,10 @@ export async function EventStagePage({ status }: { status: Exclude<EventStage, "
       <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
         <div>
           <p className="text-sm font-semibold text-primary">Coordinator event pipeline</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">{stage.label} events</h1>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{stage.label} events</h1>
           <p className="mt-2 max-w-3xl text-muted-foreground">{stage.description}</p>
         </div>
-        <Button asChild><Link href="/coordinator/events/new"><Plus className="size-4" /> Create event</Link></Button>
+        <Button asChild className="w-full sm:w-auto"><Link href="/coordinator/events/new"><Plus className="size-4" /> Create event</Link></Button>
       </div>
 
       <EventStageTabs active={status} />
@@ -50,7 +50,7 @@ export async function EventStagePage({ status }: { status: Exclude<EventStage, "
 
       {!error && events.length === 0 ? (
         <Card className="border-0">
-          <CardContent className="grid min-h-[360px] place-items-center p-10 text-center">
+          <CardContent className="grid min-h-[280px] place-items-center p-7 text-center sm:min-h-[360px] sm:p-10">
             <div>
               <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-accent text-primary"><Icon className="size-7" /></span>
               <h2 className="mt-5 text-xl font-bold">{stage.emptyTitle}</h2>
@@ -65,7 +65,7 @@ export async function EventStagePage({ status }: { status: Exclude<EventStage, "
             const participantProgress = percentage(event.registrationCount, participantTarget);
             return (
               <Card className="border-0" key={event.id}>
-                <CardContent className="p-6">
+                <CardContent className="p-5 sm:p-6">
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
@@ -78,7 +78,7 @@ export async function EventStagePage({ status }: { status: Exclude<EventStage, "
                     <Icon className="size-5 shrink-0 text-primary" />
                   </div>
 
-                  <div className="mt-6 grid grid-cols-3 gap-3">
+                  <div className="mt-6 grid grid-cols-1 gap-2 min-[430px]:grid-cols-3 sm:gap-3">
                     <div className="rounded-xl bg-muted p-3">
                       <p className="text-xs text-muted-foreground">Participants</p>
                       <p className="mt-1 font-bold">{event.registrationCount}{participantTarget ? `/${participantTarget}` : ""}</p>
@@ -105,9 +105,9 @@ export async function EventStagePage({ status }: { status: Exclude<EventStage, "
 
                   {status === "archived" && <p className="mt-4 text-sm text-muted-foreground">Recorded attendance: <span className="font-semibold text-foreground">{event.attendanceCount}</span></p>}
 
-                  <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
-                    {status === "ongoing" && <Button asChild size="sm" variant="outline"><Link href={`/coordinator/events/${event.id}/edit`}><Pencil className="size-4"/>Edit requirements</Link></Button>}
-                    <Button asChild size="sm" variant="outline">
+                  <div className="mt-6 grid gap-2 min-[520px]:flex min-[520px]:flex-wrap min-[520px]:items-center min-[520px]:justify-end">
+                    {status === "ongoing" && <Button asChild className="w-full min-[520px]:w-auto" size="sm" variant="outline"><Link href={`/coordinator/events/${event.id}/edit`}><Pencil className="size-4"/>Edit requirements</Link></Button>}
+                    <Button asChild className="w-full min-[520px]:w-auto" size="sm" variant="outline">
                       <Link href={status === "ongoing" ? `/coordinator/events/${event.id}/operations` : `/coordinator/events/${event.id}/lifecycle`}>
                         {status === "ongoing" ? "Manage event operations" : status === "upcoming" ? "Attendance and delivery" : status === "awaiting_closure" ? "Complete closure" : "View event record"} <ArrowRight className="size-4" />
                       </Link>

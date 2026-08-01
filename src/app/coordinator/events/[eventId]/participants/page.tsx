@@ -58,7 +58,7 @@ export default async function EventParticipantsPage({ params }: { params: Promis
         <Link className="inline-flex items-center gap-2 text-sm font-semibold text-primary" href={stage.href}>
           <ArrowLeft className="size-4" /> Back to {stage.label} events
         </Link>
-        <h1 className="mt-5 text-3xl font-bold tracking-tight">Recruit and confirm participants</h1>
+        <h1 className="mt-5 text-2xl font-bold tracking-tight sm:text-3xl">Recruit and confirm participants</h1>
         <p className="mt-2 text-muted-foreground">{event.name} · {organisation?.name} · {event.venue}</p>
       </div>
 
@@ -134,14 +134,14 @@ export default async function EventParticipantsPage({ params }: { params: Promis
               </p>
             </div>
             {event.participant_reviewed_at && outreachReady ? (
-              <form action={moveReadyEventToUpcoming}>
+              <form action={moveReadyEventToUpcoming} className="w-full sm:w-auto">
                 <input name="eventId" type="hidden" value={event.id} />
-                <Button type="submit">Proceed to Upcoming</Button>
+                <Button className="w-full sm:w-auto" type="submit">Proceed to Upcoming</Button>
               </form>
             ) : event.participant_reviewed_at ? <Badge variant="success">Reviewed</Badge> : (
-              <form action={markParticipantListReviewed}>
+              <form action={markParticipantListReviewed} className="w-full sm:w-auto">
                 <input name="eventId" type="hidden" value={event.id} />
-                <Button type="submit">Complete participant review</Button>
+                <Button className="w-full sm:w-auto" type="submit">Complete participant review</Button>
               </form>
             )}
           </CardContent>

@@ -8,11 +8,17 @@ export default async function ParticipantLayout({ children }: { children: React.
   const profile = await getCurrentProfile();
   const lang = profile?.preferredLanguage ?? "en";
   const t = getTranslations(lang);
+  const shortLabels = {
+    en: { discover: "Discover", calendar: "Calendar", pass: "Pass", progress: "Progress" },
+    zh: { discover: "探索", calendar: "日历", pass: "通行证", progress: "进度" },
+    ms: { discover: "Acara", calendar: "Kalendar", pass: "Pas", progress: "Kemajuan" },
+    ta: { discover: "தேடல்", calendar: "நாட்காட்டி", pass: "அட்டை", progress: "வளர்ச்சி" },
+  }[lang];
   const navigation: NavigationItem[] = [
-    { href: "/participant/events", label: t.nav.discover, icon: "compass" },
-    { href: "/participant/calendar", label: t.nav.calendar, icon: "calendar" },
-    { href: "/participant/pass", label: t.nav.pass, icon: "pass" },
-    { href: "/participant/progress", label: t.nav.progress, icon: "award" },
+    { href: "/participant/events", label: t.nav.discover, shortLabel: shortLabels.discover, icon: "compass" },
+    { href: "/participant/calendar", label: t.nav.calendar, shortLabel: shortLabels.calendar, icon: "calendar" },
+    { href: "/participant/pass", label: t.nav.pass, shortLabel: shortLabels.pass, icon: "pass" },
+    { href: "/participant/progress", label: t.nav.progress, shortLabel: shortLabels.progress, icon: "award" },
     { href: "/participant/profile", label: t.nav.profile, icon: "profile" },
   ];
 

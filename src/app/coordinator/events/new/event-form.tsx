@@ -173,11 +173,11 @@ export function EventForm({ courses, organisations }: { courses: CourseOption[];
           {state.error}
         </p>
       )}
-      <div className="flex justify-end gap-3 sm:col-span-2">
-        <Button disabled={pending || organisations.length === 0} name="intent" type="submit" value="draft" variant="outline">
+      <div className="grid gap-2 sm:col-span-2 sm:flex sm:justify-end sm:gap-3">
+        <Button className="w-full sm:w-auto" disabled={pending || organisations.length === 0} name="intent" type="submit" value="draft" variant="outline">
           Save draft
         </Button>
-        <Button disabled={pending || organisations.length === 0} name="intent" type="submit" value="start">
+        <Button className="w-full sm:w-auto" disabled={pending || organisations.length === 0} name="intent" type="submit" value="start">
           {pending ? "Creating…" : "Create and match partners"}
         </Button>
       </div>

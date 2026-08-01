@@ -57,7 +57,7 @@ export default async function AnalyticsPage({ searchParams }: PageProps) {
   const hasEvents = analytics.summary.events_count > 0
 
   return (
-    <main className="space-y-6 p-4 md:p-6">
+    <div className="mx-auto max-w-7xl space-y-6">
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">Impact analytics</h1>
         <p className="text-sm text-muted-foreground">
@@ -127,7 +127,7 @@ export default async function AnalyticsPage({ searchParams }: PageProps) {
           </section>
         </div>
       ) : (
-        <div className="rounded-lg border border-dashed p-12 text-center">
+        <div className="rounded-lg border border-dashed p-8 text-center sm:p-12">
           <h2 className="text-base font-medium">No archived events in this range</h2>
           <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
             Analytics appear once an event is closed and moved to Archived. Widen the date range, or
@@ -135,6 +135,6 @@ export default async function AnalyticsPage({ searchParams }: PageProps) {
           </p>
         </div>
       )}
-    </main>
+    </div>
   )
 }
