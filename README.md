@@ -13,7 +13,7 @@ Businesses and volunteers do not require separate accounts. Coordinators engage 
 
 Built for the Morgan Stanley Code to Give Hackathon in support of Passion to Serve.
 
-## 🌟 Demo
+## Demo
 
 - **Coordinator guided demo:** [`/demo/coordinator`](http://localhost:3002/demo/coordinator)
 - **Participant guided demo:** [`/demo/participant`](http://localhost:3002/demo/participant)
@@ -21,7 +21,7 @@ Built for the Morgan Stanley Code to Give Hackathon in support of Passion to Ser
 
 The guided demos introduce the main workflows and show representative product screens without requiring coordinators or participants to understand the system beforehand.
 
-## 🎯 Problem & Solution
+## Problem & Solution
 
 ### The challenge
 
@@ -42,7 +42,7 @@ Passion2Serve brings the full event and learning journey into one coordinated pl
 - **Learning retention:** Visual course pathways, achievements, rewards, multilingual content, and event reminders encourage continued participation.
 - **Impact reporting:** Presents intuitive participation, retention, volunteer, partner, and beneficiary metrics across archived events.
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -241,7 +241,7 @@ Events only progress when the required targets and review steps are complete. Ea
 
 The most valuable automation keeps people in control. AI recommendations, pre-filled outreach, attendance follow-ups, and publicity drafts reduce repetitive work while preserving coordinator review and approval at important decision points.
 
-## 🚀 Deployment
+## Deployment
 
 The application is designed for deployment on Vercel with Supabase as its managed backend:
 
@@ -268,13 +268,13 @@ npm test
 npm run build
 ```
 
-## 🏆 Team
+## Team
 
-Built with ❤️ by the Passion2Serve team:
+Built by the Passion2Serve team:
 
 - **Jie Ying** — Full-stack development, database management, UI/UX design, outreach automation, wallet pass
 - **Si Ying** — Data visualisation, analytics dashboard
-- **Ryan** — Translation, user stories
+- **Ryan** — Translation, User experience 
 - **Minn** — Story management, AI integration, content generation
 - **Qi Xun** — Calendar views, WhatsApp integration
 
@@ -293,7 +293,7 @@ The Supabase schema includes tables and policies for:
 
 All database changes are versioned in [`supabase/migrations`](./supabase/migrations).
 
-## 🔒 Security & Privacy
+## Security & Privacy
 
 - **Authentication:** Supabase Auth manages passwords and sessions; plaintext passwords are never stored in application tables.
 - **Authorisation:** Row Level Security and coordinator assignments limit access by role and beneficiary organisation.
@@ -303,7 +303,7 @@ All database changes are versioned in [`supabase/migrations`](./supabase/migrati
 - **Participant consent:** Email, WhatsApp, publicity, and personal-story preferences are stored explicitly.
 - **Private documents:** Certificates are stored in a private bucket and served only through authorised application flows.
 
-## 📈 Operational Outcomes
+## Operational Outcomes
 
 Passion2Serve is designed to provide:
 
@@ -315,17 +315,14 @@ Passion2Serve is designed to provide:
 - Percentage-based participation, retention, volunteer, and partner reporting
 - Reusable course dependency data that immediately unlocks eligible next steps
 
-## 📄 Project Documentation
 
-The complete product requirements, workflows, data model, integrations, and implementation guidance are available in [`spec.md`](./spec.md).
-
-## 🙏 Acknowledgements
+## Acknowledgements
 
 Special thanks to:
 
 - Passion to Serve for the opportunity to design around real community coordination needs
 - Morgan Stanley for hosting the Code to Give Hackathon
-- The mentors, organisers, volunteers, beneficiaries, and community partners who informed the project
+- Our mentor, Daniel, for his invaluable guidance
 
 > “Connect with purpose. Serve with heart. Grow through community.”
 
