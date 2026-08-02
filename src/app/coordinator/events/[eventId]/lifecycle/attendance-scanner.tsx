@@ -64,7 +64,9 @@ export function AttendanceScanner({ eventId }: { eventId: string }) {
       const body = await response.json();
       if (response.ok) {
         const attendanceMessage = `${body.participantName}: attendance ${body.duplicate ? "was already recorded" : "recorded"}.`;
-        const followUpMessage = body.followUp?.error
+        const followUpMessage = body.followUp?.status === "processing"
+          ? " Certificate, points, badges, email, and wallet acknowledgement are being prepared in the background."
+          : body.followUp?.error
           ? ` Attendance is safe, but the automated follow-up failed: ${body.followUp.error}`
           : body.followUp
             ? ` Certificate ${body.followUp.certificateNumber} is saved. ${body.followUp.pointsAwarded} points awarded; badges checked. Email: ${body.followUp.emailStatus}.`

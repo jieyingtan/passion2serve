@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   inviteOrganisationMailingListToEvent,
   inviteParticipantToEvent,
+  inviteParticipantsToEvent,
   resendParticipantInvitation,
 } from "@/server/participants/invite";
 
@@ -30,15 +31,15 @@ export async function importParticipants(_state: ImportParticipantState, formDat
   try {
     const rows = await parseSpreadsheet(file);
     if (rows.length > 200) return { error: "Import up to 200 participants at a time." };
-    let saved = 0;
-    let failed = 0;
-    let skipped = 0;
-    for (const [index, row] of rows.entries()) {
+    const participants = rows.map((row, index) => {
       const parsed = z.object({ fullName: z.string().trim().min(2), email: z.string().email() }).safeParse({ fullName: row.full_name || row.name, email: row.email?.toLowerCase() });
       if (!parsed.success) throw new Error(`Check the name and email in spreadsheet row ${index + 2}.`);
-      try { const result=await inviteParticipantToEvent({ eventId: eventId.data, ...parsed.data }); if(result.duplicate)skipped+=1;else saved += 1; }
-      catch { failed += 1; }
-    }
+      return parsed.data;
+    });
+    const results = await inviteParticipantsToEvent(eventId.data, participants);
+    const saved = results.filter(({ result }) => result && !result.duplicate).length;
+    const skipped = results.filter(({ result }) => result?.duplicate).length;
+    const failed = results.filter(({ error }) => Boolean(error)).length;
     revalidatePath(`/coordinator/events/${eventId.data}/participants`);
     return { success: `${saved} new participant${saved === 1 ? "" : "s"} imported and invited.${skipped ? ` ${skipped} already on this event were skipped.` : ""}${failed ? ` ${failed} could not be imported.` : ""}` };
   } catch (error) { return { error: error instanceof Error ? error.message : "The spreadsheet could not be imported." }; }

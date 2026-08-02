@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { buildWalletPassPayload } from "@/lib/walletwallet/client";
+import {
+  buildAttendanceWalletPassPayload,
+  buildWalletPassPayload,
+} from "@/lib/walletwallet/client";
 
 function pngDimensions(dataUrl: string) {
   const png = Buffer.from(dataUrl.split(",")[1], "base64");
@@ -33,5 +36,29 @@ describe("WalletWallet pass format", () => {
     expect(pngDimensions(payload.logoURL)).toEqual({ width: 160, height: 50 });
     expect(pngDimensions(payload.iconURL)).toEqual({ width: 29, height: 29 });
     expect(pngDimensions(payload.thumbnailURL)).toEqual({ width: 90, height: 90 });
+  });
+
+  it("preserves the clean membership pass face while adding an attendance notification", () => {
+    const payload = buildAttendanceWalletPassPayload({
+      barcodeValue: "p2s1.signed-token",
+      fullName: "Jane Tan",
+      eventName: "Digital Skills Workshop",
+      eventDate: "2 August 2026",
+    });
+
+    expect(payload).toMatchObject({
+      barcodeValue: "p2s1.signed-token",
+      primaryFields: [{ label: "PARTICIPANT", value: "Jane Tan" }],
+      secondaryFields: [{ label: "STATUS", value: "Active" }],
+    });
+    expect(payload).not.toHaveProperty("headerFields");
+    expect(payload.secondaryFields).not.toContainEqual(
+      expect.objectContaining({ label: "EVENT DATE" }),
+    );
+    expect(payload.backFields.at(-1)).toMatchObject({
+      label: "LATEST ATTENDANCE",
+      value: "Digital Skills Workshop",
+      changeMessage: "Attendance confirmed for %@. Thank you for participating!",
+    });
   });
 });

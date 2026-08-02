@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
@@ -29,8 +30,13 @@ export async function registerForEvent(
   const nextStatus = (data as { status?: string } | null)?.status ?? "registered";
 
   if (["registered", "confirmed", "waitlisted"].includes(nextStatus)) {
-    try { await sendEventNotice({ participantId: user.id, eventId: eventId.data, type: "registration_receipt" }); }
-    catch (noticeError) { console.error("Registration saved but receipt delivery failed.", noticeError); }
+    after(async () => {
+      try {
+        await sendEventNotice({ participantId: user.id, eventId: eventId.data, type: "registration_receipt" });
+      } catch (noticeError) {
+        console.error("Registration saved but receipt delivery failed.", noticeError);
+      }
+    });
   }
 
   revalidatePath("/participant/events");

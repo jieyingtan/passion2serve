@@ -107,6 +107,10 @@ async function getInvitationContext(eventId: string): Promise<InvitationContext>
 
 class InvitationEligibilityError extends Error {}
 
+type BatchedInvitationResult =
+  | { result: InviteParticipantResult; error?: never }
+  | { result?: never; error: unknown };
+
 async function assertInvitationEligibility(context: InvitationContext, participantId?: string) {
   if (!context.event.course_id) return;
   const admin = createAdminClient();
@@ -219,10 +223,45 @@ async function saveAndSendInvitation(
   return { kind, participantId, deliveryStatus, duplicate: false };
 }
 
+async function saveInvitationsInBatches(
+  context: InvitationContext,
+  participants: Array<{ email: string; fullName: string }>,
+  source: "individual" | "organisation_mailing_list",
+): Promise<BatchedInvitationResult[]> {
+  const results: BatchedInvitationResult[] = [];
+  const batchSize = 8;
+  for (let index = 0; index < participants.length; index += batchSize) {
+    const batch = participants.slice(index, index + batchSize);
+    results.push(...await Promise.all(batch.map(async (participant) => {
+      try {
+        return { result: await saveAndSendInvitation(context, participant, source) };
+      } catch (error) {
+        return { error };
+      }
+    })));
+  }
+  return results;
+}
+
 export async function inviteParticipantToEvent(input: InviteParticipantInput) {
   const parsed = invitationSchema.parse({ ...input, email: normalizeParticipantEmail(input.email) });
   const context = await getInvitationContext(parsed.eventId);
   return saveAndSendInvitation(context, parsed, "individual");
+}
+
+export async function inviteParticipantsToEvent(
+  eventId: string,
+  participants: Array<{ email: string; fullName: string }>,
+) {
+  const parsedEventId = z.string().uuid().parse(eventId);
+  const parsedParticipants = z.array(invitationSchema.omit({ eventId: true })).max(200).parse(
+    participants.map((participant) => ({
+      ...participant,
+      email: normalizeParticipantEmail(participant.email),
+    })),
+  );
+  const context = await getInvitationContext(parsedEventId);
+  return saveInvitationsInBatches(context, parsedParticipants, "individual");
 }
 
 export async function inviteOrganisationMailingListToEvent(eventId: string) {
@@ -238,19 +277,15 @@ export async function inviteOrganisationMailingListToEvent(eventId: string) {
   if (error) throw new Error("The beneficiary mailing list could not be loaded.");
   if (!members?.length) throw new Error("This beneficiary organisation has no active mailing-list members.");
 
-  const results: InviteParticipantResult[] = [];
-  let ineligible = 0;
-  for (const member of members) {
-    try {
-      results.push(await saveAndSendInvitation(context, {
-        email: member.email,
-        fullName: member.full_name,
-      }, "organisation_mailing_list"));
-    } catch (error) {
-      if (error instanceof InvitationEligibilityError) ineligible += 1;
-      else throw error;
-    }
-  }
+  const batchResults = await saveInvitationsInBatches(
+    context,
+    members.map((member) => ({ email: member.email, fullName: member.full_name })),
+    "organisation_mailing_list",
+  );
+  const unexpectedError = batchResults.find(({ error }) => error && !(error instanceof InvitationEligibilityError))?.error;
+  if (unexpectedError) throw unexpectedError;
+  const results = batchResults.flatMap(({ result }) => result ? [result] : []);
+  const ineligible = batchResults.filter(({ error }) => error instanceof InvitationEligibilityError).length;
 
   return {
     total: members.length,

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { isQrConfigured } from "@/lib/config";
@@ -84,11 +84,19 @@ export async function POST(request: Request) {
     );
   }
 
-  let followUp: Awaited<ReturnType<typeof processAttendanceFollowUp>> | { error: string };
-  try {
-    followUp = await processAttendanceFollowUp({ eventId: parsed.data.eventId, participantId: payload.participantId });
-  } catch (error) {
-    followUp = { error: error instanceof Error ? error.message : "Automated follow-up could not be completed." };
-  }
-  return NextResponse.json({ ...(data as Record<string, unknown>), followUp }, { status: 200 });
+  after(async () => {
+    try {
+      await processAttendanceFollowUp({
+        eventId: parsed.data.eventId,
+        participantId: payload.participantId,
+      });
+    } catch (error) {
+      console.error("Attendance was recorded but its automated follow-up failed.", error);
+    }
+  });
+
+  return NextResponse.json({
+    ...(data as Record<string, unknown>),
+    followUp: { status: "processing" },
+  }, { status: 200 });
 }

@@ -2,6 +2,7 @@ import { buildCertificatePdf } from "@/lib/certificates/pdf";
 import { escapeEmailHtml, isMailjetConfigured, sendEmail } from "@/lib/mailjet/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buildAttendanceAcknowledgementUrl } from "./delivery";
+import { sendAttendanceWalletNotification } from "./wallet";
 
 export async function processAttendanceFollowUp(input: { eventId: string; participantId: string }) {
   const admin = createAdminClient();
@@ -13,6 +14,13 @@ export async function processAttendanceFollowUp(input: { eventId: string; partic
   if (!profile || !event) throw new Error("Attendance follow-up details were not found.");
   const certificateNumber = `P2S-${new Date(event.starts_at).getFullYear()}-${input.eventId.slice(0, 8).toUpperCase()}-${input.participantId.slice(0, 8).toUpperCase()}`;
   const eventDate = new Intl.DateTimeFormat("en-SG", { dateStyle: "long", timeZone: "Asia/Singapore" }).format(new Date(event.starts_at));
+  const walletNotification = await sendAttendanceWalletNotification({
+    participantId: input.participantId,
+    eventId: input.eventId,
+    participantName: profile.full_name,
+    eventName: event.name,
+    eventDate,
+  });
   const pdf = buildCertificatePdf({ participantName: profile.full_name, eventName: event.name, eventDate, certificateNumber });
   const storagePath = `${input.eventId}/${input.participantId}.pdf`;
   const uploaded = await admin.storage.from("certificates-private").upload(storagePath, pdf, { contentType: "application/pdf", upsert: true });
@@ -55,5 +63,5 @@ export async function processAttendanceFollowUp(input: { eventId: string; partic
     whatsappStatus = "manual";
     await admin.from("notification_deliveries").upsert({ participant_id: input.participantId, event_id: input.eventId, channel: "whatsapp", notification_type: "attendance_acknowledgement", idempotency_key: key, recipient: profile.phone, provider: "wa_me", status: "manual", payload: { acknowledgementUrl } }, { onConflict: "idempotency_key" });
   }
-  return { certificateNumber, emailStatus, whatsappStatus, acknowledgementUrl, pointsAwarded: 100, badgesAwarded: badgeCodes };
+  return { certificateNumber, emailStatus, whatsappStatus, walletNotification, acknowledgementUrl, pointsAwarded: 100, badgesAwarded: badgeCodes };
 }

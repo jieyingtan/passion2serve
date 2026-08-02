@@ -6,11 +6,23 @@ interface WalletPassInput {
   fullName: string;
 }
 
+interface AttendanceWalletUpdateInput extends WalletPassInput {
+  eventName: string;
+  eventDate: string;
+}
+
 interface WalletWalletResponse {
   serialNumber: string;
   googleSaveUrl: string;
   applePass: string;
   shareUrl: string;
+}
+
+export interface WalletWalletUpdateResponse {
+  serialNumber: string;
+  lastUpdated: number;
+  notifiedDevices: number;
+  unchanged: boolean;
 }
 
 export function isWalletWalletConfigured() {
@@ -34,6 +46,21 @@ export function buildWalletPassPayload(input: WalletPassInput) {
   };
 }
 
+export function buildAttendanceWalletPassPayload(input: AttendanceWalletUpdateInput) {
+  const base = buildWalletPassPayload(input);
+  return {
+    ...base,
+    backFields: [
+      ...base.backFields,
+      {
+        label: "LATEST ATTENDANCE",
+        value: input.eventName,
+        changeMessage: "Attendance confirmed for %@. Thank you for participating!",
+      },
+    ],
+  };
+}
+
 export async function createWalletPass(input: WalletPassInput): Promise<WalletWalletResponse> {
   const response = await fetch("https://api.walletwallet.dev/api/passes", {
     method: "POST",
@@ -50,4 +77,25 @@ export async function createWalletPass(input: WalletPassInput): Promise<WalletWa
   }
 
   return (await response.json()) as WalletWalletResponse;
+}
+
+export async function updateWalletPassAfterAttendance(
+  serialNumber: string,
+  input: AttendanceWalletUpdateInput,
+): Promise<WalletWalletUpdateResponse> {
+  const response = await fetch(`https://api.walletwallet.dev/api/passes/${encodeURIComponent(serialNumber)}`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${getRequiredEnv("WALLETWALLET_API_KEY")}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(buildAttendanceWalletPassPayload(input)),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`WalletWallet attendance update failed with status ${response.status}.`);
+  }
+
+  return (await response.json()) as WalletWalletUpdateResponse;
 }

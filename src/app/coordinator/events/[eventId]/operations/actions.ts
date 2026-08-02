@@ -54,7 +54,11 @@ async function runAiShortlist(formData: FormData): Promise<AiShortlistState> {
   let usedAi = false;
   if (process.env.OPENAI_API_KEY) {
     try {
-      const response = await new OpenAI({ apiKey: process.env.OPENAI_API_KEY }).responses.create({
+      const response = await new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+        maxRetries: 0,
+        timeout: 4000,
+      }).responses.create({
         model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
         input: [
           { role: "system", content: "You match community-service events to partners and volunteers. Return only valid JSON. Use only supplied IDs. Recommend a candidate only when their supplied capabilities, interests, or skills directly match the event type and purpose. Omit candidates without clear evidence. Scores and concise explanations must cite that evidence." },
@@ -162,9 +166,11 @@ async function authorisedEvent(eventId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Authentication required.");
   const admin = createAdminClient();
-  const { data: profile } = await admin.from("profiles").select("role").eq("id", user.id).maybeSingle();
+  const [{ data: profile }, { data: event }] = await Promise.all([
+    admin.from("profiles").select("role").eq("id", user.id).maybeSingle(),
+    admin.from("events").select("id, name, event_type, organisation_id, starts_at, venue, beneficiary_organisations(name)").eq("id", eventId).maybeSingle(),
+  ]);
   if (profile?.role !== "coordinator") throw new Error("Coordinator access required.");
-  const { data: event } = await admin.from("events").select("id, name, event_type, organisation_id, starts_at, venue, beneficiary_organisations(name)").eq("id", eventId).maybeSingle();
   if (!event) throw new Error("Event not found.");
   const { data: assignment } = await admin.from("coordinator_assignments").select("id").eq("coordinator_id", user.id).eq("organisation_id", event.organisation_id).maybeSingle();
   if (!assignment) throw new Error("You are not authorised to manage this event.");
