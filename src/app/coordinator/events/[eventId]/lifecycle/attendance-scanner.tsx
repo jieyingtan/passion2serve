@@ -1,7 +1,7 @@
 "use client";
 
 import type { BrowserQRCodeReader, IScannerControls } from "@zxing/browser";
-import { Camera, ScanLine } from "lucide-react";
+import { Camera, ExternalLink, MessageCircle, ScanLine } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -26,6 +26,7 @@ export function AttendanceScanner({ eventId }: { eventId: string }) {
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
+  const [acknowledgementUrl, setAcknowledgementUrl] = useState<string | null>(null);
 
   function releaseCamera() {
     if (scanHelpTimerRef.current) clearTimeout(scanHelpTimerRef.current);
@@ -53,6 +54,7 @@ export function AttendanceScanner({ eventId }: { eventId: string }) {
     if (clean.length < 40 || pending) return;
     setPending(true);
     setMessage("Recording attendance…");
+    setAcknowledgementUrl(null);
     try {
       const response = await fetch("/api/attendance/scan", {
         method: "POST",
@@ -68,6 +70,7 @@ export function AttendanceScanner({ eventId }: { eventId: string }) {
             ? ` Certificate ${body.followUp.certificateNumber} is saved. ${body.followUp.pointsAwarded} points awarded; badges checked. Email: ${body.followUp.emailStatus}.`
             : "";
         setMessage(`${attendanceMessage}${followUpMessage}`);
+        setAcknowledgementUrl(body.followUp?.acknowledgementUrl ?? null);
       } else {
         setMessage(body.error);
       }
@@ -203,6 +206,7 @@ export function AttendanceScanner({ eventId }: { eventId: string }) {
       </div>
 
       {message && <p className="rounded-lg bg-muted px-3 py-2 text-sm font-semibold" role="status">{message}</p>}
+      {acknowledgementUrl && <Button asChild className="w-full sm:w-auto"><a href={acknowledgementUrl} rel="noreferrer" target="_blank"><MessageCircle className="size-4" />Open acknowledgement in WhatsApp<ExternalLink className="size-4" /></a></Button>}
       <p className="text-xs text-muted-foreground">On iPhone and iPad, use the deployed HTTPS site and allow camera access when prompted.</p>
     </div>
   );

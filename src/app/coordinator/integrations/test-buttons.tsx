@@ -1,8 +1,0 @@
-"use client";
-
-import { useActionState } from "react";
-import { Button } from "@/components/ui/button";
-import { sendMailjetTest,sendWhatsAppTest,type IntegrationTestState } from "./actions";
-
-export function MailjetTestButton(){const[state,action,pending]=useActionState<IntegrationTestState,FormData>(sendMailjetTest,{});return <form action={action} className="space-y-2"><Button disabled={pending} type="submit">{pending?"Sending…":"Send test email"}</Button>{state.error&&<p className="text-sm text-destructive">{state.error}</p>}{state.success&&<p className="text-sm text-emerald-700">{state.success}</p>}</form>}
-export function WhatsAppTestButton(){const[state,action,pending]=useActionState<IntegrationTestState,FormData>(sendWhatsAppTest,{});return <form action={action} className="space-y-3"><label className="block space-y-1.5 text-sm font-medium" htmlFor="whatsapp-test-recipient"><span>Meta test recipient</span><input autoComplete="tel" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" id="whatsapp-test-recipient" inputMode="tel" name="recipient" placeholder="+65 9123 4567" required type="tel"/></label><p className="text-xs text-muted-foreground">During Meta test mode, this number must be added to the app&apos;s allowed recipient list.</p><Button disabled={pending} type="submit">{pending?"Sending…":"Send test WhatsApp"}</Button>{state.error&&<p className="text-sm text-destructive">{state.error}</p>}{state.success&&<p className="text-sm text-emerald-700">{state.success}</p>}</form>}

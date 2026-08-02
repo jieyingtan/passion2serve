@@ -1,24 +1,14 @@
-"use client";
-
-import { useActionState } from "react";
-import { Send } from "lucide-react";
+import { ExternalLink, MessageCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
-import { sendOutreachWhatsApp, type OutreachSendState } from "./actions";
-
-export function OutreachSendForm({ eventId, selectionId, recipientType }: { eventId: string; selectionId: string; recipientType: "business" | "volunteer" }) {
-  const [state, action, pending] = useActionState<OutreachSendState, FormData>(sendOutreachWhatsApp, {});
+export function OutreachSendForm({ href }: { href: string | null }) {
+  if (!href) {
+    return <Button className="w-full" disabled size="sm" type="button" variant="outline"><MessageCircle className="size-3.5" />Phone number unavailable</Button>;
+  }
   return (
-    <form action={action} className="space-y-1.5">
-      <input name="eventId" type="hidden" value={eventId} />
-      <input name="selectionId" type="hidden" value={selectionId} />
-      <input name="recipientType" type="hidden" value={recipientType} />
-      <Button className="w-full" disabled={pending} size="sm" type="submit" variant="outline">
-        <Send className="size-3.5" />{pending ? "Sending…" : "Send WhatsApp"}
-      </Button>
-      {state.success && <p className="text-xs font-medium text-emerald-700" role="status">{state.success}</p>}
-      {state.error && <p className="text-xs font-medium text-destructive" role="alert">{state.error}</p>}
-    </form>
+    <Button asChild className="w-full" size="sm" variant="outline">
+      <a href={href} rel="noreferrer" target="_blank"><MessageCircle className="size-3.5" />Open pre-filled WhatsApp<ExternalLink className="size-3.5" /></a>
+    </Button>
   );
 }

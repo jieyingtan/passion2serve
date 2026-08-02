@@ -82,30 +82,6 @@ export async function GET(request: NextRequest) {
         { key: 'volunteers_engaged', label: 'Volunteers' },
         { key: 'businesses_engaged', label: 'Businesses' },
         { key: 'certificates_issued', label: 'Certificates' },
-        { key: 'course_completions', label: 'Course completions' },
-      ]),
-    )
-
-    sections.push(
-      section('Social engagement by platform', analytics.socialTotals, [
-        { key: 'integration', label: 'Channel' },
-        { key: 'posts_count', label: 'Posts' },
-        { key: 'likes', label: 'Likes' },
-        { key: 'shares', label: 'Shares' },
-        { key: 'comments', label: 'Comments' },
-        { key: 'impressions', label: 'Impressions' },
-        { key: 'reach', label: 'Reach' },
-      ]),
-    )
-
-    sections.push(
-      section('Event and course completion', analytics.completionTrend, [
-        { key: 'period_start', label: 'Period' },
-        { key: 'events_completed', label: 'Events completed' },
-        { key: 'course_completions', label: 'Course completions' },
-        { key: 'certificates_issued', label: 'Certificates issued' },
-        { key: 'participants_completing', label: 'Participants' },
-        { key: 'completion_rate', label: 'Completion rate' },
       ]),
     )
 

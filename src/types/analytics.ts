@@ -144,7 +144,4 @@ export interface ImpactAnalytics {
   participation: ParticipationSummaryRow
   participationByEvent: ParticipationByEventRow[]
   beneficiaries: BeneficiaryImpactRow[]
-  socialTotals: SocialTotalsRow[]
-  socialTrend: SocialTrendRow[]
-  completionTrend: CompletionTrendRow[]
 }

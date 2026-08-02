@@ -566,7 +566,7 @@ The MVP is considered complete when:
 | Styling | Tailwind CSS | Responsive layout, design tokens, and utility styling |
 | UI components | shadcn/ui and Radix UI primitives | Accessible forms, dialogs, menus, tabs, tables, calendars, and notifications |
 | Backend platform | Supabase | PostgreSQL database, authentication, object storage, real-time updates, and scheduled or background functions |
-| AI and ML | OpenAI API with GPT-4 | Content generation, business research assistance, matching explanations, translation assistance, and impact summaries |
+| AI and ML | OpenAI API and Google Gemini API | OpenAI supports matching and translation; Gemini generates publicity concepts, image prompts, and social captions |
 | Transactional email | Mailjet Send API v3.1 | Account invitations, registration receipts, reminders, attendance confirmations, and certificate delivery |
 | Wallet passes | [WalletWallet](https://www.walletwallet.dev/) | Apple Wallet and Google Wallet pass creation, update, sharing, and revocation |
 | Social publishing | [Postiz](https://github.com/gitroomhq/postiz-app) Public API | Connected social channels, approved post publishing or scheduling, and engagement analytics |
@@ -586,7 +586,8 @@ flowchart LR
     S --> AU["Auth"]
     S --> ST["Private Storage"]
     S --> RT["Real-time"]
-    N --> AI["OpenAI GPT-4"]
+    N --> AI["OpenAI matching and translation"]
+    N --> GM["Gemini publicity generation"]
     N --> MJ["Mailjet"]
     N --> WW["WalletWallet"]
     N --> PO["Postiz"]
@@ -778,18 +779,19 @@ Subscriptions must follow the same access scope as normal reads. The UI must als
 
 ## 17. Integration Implementation
 
-### 17.1 OpenAI GPT-4
+### 17.1 OpenAI and Gemini
 
-Use a server-only OpenAI client. The exact model ID must come from `OPENAI_MODEL` so it can be upgraded without a code change.
+Use server-only OpenAI and Gemini integrations. Exact model IDs come from `OPENAI_MODEL` and `GEMINI_MODEL` so they can be upgraded without code changes.
 
 Implement these separate AI services:
 
 - `recommendBusinesses(eventId)`
 - `matchVolunteers(eventId, volunteerIds)`
 - `recommendParticipantEvents(participantId)`
-- `generatePublicityDraft(eventId, channels)`
 - `translateContent(contentId, language)`
 - `generateImpactSummary(eventId)`
+
+Publicity generation uses the server-only Gemini `generateContent` API. The model ID comes from `GEMINI_MODEL`, and `GEMINI_API_KEY` must never be exposed to Client Components. Gemini produces three structured visual concepts followed by a structured FLUX image prompt and social caption. Both responses are validated against JSON schemas before use. FLUX/fal.ai remains responsible for rendering the poster image.
 
 Business and volunteer matching should use a hybrid approach:
 
@@ -878,7 +880,7 @@ Use the Postiz Public API from server-only code. The recommended MVP approach is
 Publishing flow:
 
 1. A Coordinator uploads and approves publicity assets.
-2. GPT-4 generates channel-specific drafts.
+2. Gemini generates channel-specific drafts.
 3. The Coordinator edits and approves each draft.
 4. The server retrieves available Postiz integrations or uses previously synchronised integration IDs.
 5. Approved media is uploaded or supplied through a short-lived permitted URL.
@@ -962,7 +964,7 @@ Certificate or messaging failure must not roll back valid attendance. The Coordi
 ### 18.4 Event Closure and Social Publishing
 
 1. The Coordinator selects approved photos.
-2. GPT-4 produces draft text for selected channels.
+2. Gemini produces draft text for selected channels.
 3. The Coordinator edits and explicitly approves the content.
 4. Postiz publishes or schedules the posts.
 5. Closure figures are validated and submitted.
@@ -1027,6 +1029,8 @@ SUPABASE_SERVICE_ROLE_KEY
 
 OPENAI_API_KEY
 OPENAI_MODEL
+GEMINI_API_KEY
+GEMINI_MODEL
 
 MAILJET_API_KEY
 MAILJET_SECRET_KEY
@@ -1098,7 +1102,7 @@ Do not run the self-hosted Postiz stack inside the Vercel deployment. If self-ho
 ### Integration Tests
 
 - Supabase Auth and Storage permissions
-- OpenAI structured-output validation with mocked responses
+- OpenAI matching and Gemini publicity structured-output validation with mocked responses
 - Mailjet template and attachment payloads
 - WalletWallet create, update, and revoke payloads
 - Postiz publishing and metric mapping
@@ -1156,7 +1160,7 @@ Do not run the self-hosted Postiz stack inside the Vercel deployment. If self-ho
 
 ### Phase 5: Closure, Publicity, and Analytics
 
-- Add photo approval and GPT-4 publicity drafting.
+- Add photo approval and Gemini publicity drafting.
 - Integrate Postiz publishing and scheduling.
 - Synchronise supported engagement metrics.
 - Build Recharts impact dashboards and archived-event reporting.
@@ -1166,6 +1170,7 @@ Do not run the self-hosted Postiz stack inside the Vercel deployment. If self-ho
 | Decision or risk | Required action |
 | --- | --- |
 | Exact GPT-4 model identifier and data-retention configuration | Select an approved model and keep it configurable through `OPENAI_MODEL`. |
+| Exact Gemini model identifier and data-retention configuration | Keep publicity generation configurable through `GEMINI_MODEL` and review Google AI data-use settings. |
 | WhatsApp automated sending | Confirm provider, business verification, template approval, consent, and webhook setup. |
 | Postiz Cloud versus self-hosting | Choose before social implementation; complete AGPL, infrastructure, privacy, and security review for self-hosting. |
 | Social platform permissions | Register and verify required platform applications early; capabilities and analytics differ by provider. |

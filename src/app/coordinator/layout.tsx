@@ -10,7 +10,6 @@ const navigation: NavigationItem[] = [
   { href: "/coordinator/events/archived", label: "Archived", icon: "archive" },
   { href: "/coordinator/calendar", label: "Calendar", icon: "calendar" },
   { href: "/coordinator/analytics", label: "Impact analytics", icon: "analytics" },
-  { href: "/coordinator/integrations", label: "Messaging setup", icon: "integrations" },
 ];
 
 export default async function CoordinatorLayout({ children }: { children: React.ReactNode }) {

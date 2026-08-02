@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, Download, ImageIcon, Loader2, RefreshCw, Send, Sparkles } from "lucide-react";
+import { CheckCircle2, Download, ImageIcon, Loader2, Send, Sparkles } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import type { EventClosureMetadata, PublicityDraft, VisualConcept } from "@/types/publicity";
+import type { PublicityDraft } from "@/types/publicity";
 
 import {
   generateClosureDraftAction,
@@ -14,43 +13,36 @@ import {
   publishClosurePublicityAction,
 } from "./actions";
 
-type Phase = "IDLE" | "SELECTING_CONCEPT" | "GENERATING_DRAFT" | "REVIEW" | "PUBLISHED";
+type Phase = "IDLE" | "GENERATING_DRAFT" | "REVIEW" | "PUBLISHED";
 
 export function PublicityGenerator({ eventId }: { eventId: string }) {
   const [phase, setPhase] = useState<Phase>("IDLE");
-  const [concepts, setConcepts] = useState<VisualConcept[]>([]);
-  const [metadata, setMetadata] = useState<EventClosureMetadata | null>(null);
   const [draft, setDraft] = useState<PublicityDraft | null>(null);
   const [caption, setCaption] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const posterFilename = draft?.imageUrl.split("/").at(-1) ?? "publicity-poster.png";
 
   async function handleGenerateConcepts() {
     setError(null);
     setLoading(true);
-    const result = await getClosureConceptsAction(eventId);
-    setLoading(false);
-    if (!result.success) {
-      setError(result.error ?? "Could not generate concepts.");
-      return;
-    }
-    setConcepts(result.concepts!);
-    setMetadata(result.metadata!);
-    setPhase("SELECTING_CONCEPT");
-  }
-
-  async function handleSelectConcept(concept: VisualConcept) {
-    if (!metadata) return;
-    setError(null);
     setPhase("GENERATING_DRAFT");
-    const result = await generateClosureDraftAction(concept, metadata);
+    const result = await getClosureConceptsAction(eventId);
     if (!result.success) {
-      setError(result.error ?? "Draft generation failed.");
-      setPhase("SELECTING_CONCEPT");
+      setLoading(false);
+      setError(result.error ?? "Could not generate concepts.");
+      setPhase("IDLE");
       return;
     }
-    setDraft(result.draft!);
-    setCaption(result.draft!.caption);
+    const draftResult = await generateClosureDraftAction(result.concepts![0], result.metadata!);
+    setLoading(false);
+    if (!draftResult.success) {
+      setError(draftResult.error ?? "Draft generation failed.");
+      setPhase("IDLE");
+      return;
+    }
+    setDraft(draftResult.draft!);
+    setCaption(draftResult.draft!.caption);
     setPhase("REVIEW");
   }
 
@@ -67,17 +59,9 @@ export function PublicityGenerator({ eventId }: { eventId: string }) {
     setPhase("PUBLISHED");
   }
 
-  function handleRegenerate() {
-    setDraft(null);
-    setCaption("");
-    setPhase("SELECTING_CONCEPT");
-  }
-
   function handleStartOver() {
     setDraft(null);
     setCaption("");
-    setConcepts([]);
-    setMetadata(null);
     setPhase("IDLE");
   }
 
@@ -96,41 +80,8 @@ export function PublicityGenerator({ eventId }: { eventId: string }) {
           ) : (
             <Sparkles className="size-4" />
           )}
-          {loading ? "Generating concepts…" : "Draft AI Publicity Poster"}
+          {loading ? "Preparing publicity…" : "Generate Poster & Instagram Caption"}
         </Button>
-      )}
-
-      {phase === "SELECTING_CONCEPT" && (
-        <div className="space-y-3">
-          <p className="text-sm font-semibold">
-            Choose a visual direction for the poster:
-          </p>
-          <div className="grid gap-3 sm:grid-cols-3">
-            {concepts.map((concept) => (
-              <Card
-                className="cursor-pointer border-0 transition-shadow hover:shadow-md"
-                key={concept.id}
-                onClick={() => handleSelectConcept(concept)}
-              >
-                <CardContent className="space-y-2 p-5">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="font-semibold">{concept.conceptName}</p>
-                    <Badge variant="outline">{concept.lightingMood}</Badge>
-                  </div>
-                  <p className="text-sm font-medium text-primary">
-                    {concept.headlineHook}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {concept.visualFocus}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {concept.targetAudienceNote}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
       )}
 
       {phase === "GENERATING_DRAFT" && (
@@ -138,7 +89,7 @@ export function PublicityGenerator({ eventId }: { eventId: string }) {
           <CardContent className="flex flex-col items-center gap-4 p-8">
             <Loader2 className="size-8 animate-spin text-primary" />
             <p className="text-sm font-semibold text-muted-foreground">
-              Generating poster via FLUX.1 schnell and social copy…
+              Selecting the category poster and preparing an Instagram caption…
             </p>
             <div className="grid w-full gap-3 sm:grid-cols-2">
               <div className="h-64 animate-pulse rounded-xl bg-muted" />
@@ -155,20 +106,21 @@ export function PublicityGenerator({ eventId }: { eventId: string }) {
 
       {phase === "REVIEW" && draft && (
         <div className="space-y-4">
+          {draft.generationNote && <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">{draft.generationNote}</p>}
           <div className="grid gap-4 sm:grid-cols-2">
             <Card className="border-0 overflow-hidden">
               <CardContent className="p-0">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  alt="AI-generated publicity poster"
-                  className="aspect-square w-full object-cover"
+                  alt="Passion2Serve publicity poster"
+                  className="aspect-[4/5] w-full bg-muted object-contain"
                   src={draft.imageUrl}
                 />
               </CardContent>
             </Card>
             <div className="space-y-3">
               <label className="text-sm font-semibold" htmlFor="publicity-caption">
-                Social media caption
+                Instagram caption
               </label>
               <textarea
                 className="min-h-48 w-full rounded-md border bg-background p-3 text-sm"
@@ -185,12 +137,8 @@ export function PublicityGenerator({ eventId }: { eventId: string }) {
             </div>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Button onClick={handleRegenerate} variant="outline">
-              <RefreshCw className="size-4" />
-              Regenerate
-            </Button>
             <Button asChild variant="outline">
-              <a download="publicity-poster.jpg" href={draft.imageUrl} target="_blank" rel="noopener noreferrer">
+              <a download={posterFilename} href={draft.imageUrl} target="_blank" rel="noopener noreferrer">
                 <Download className="size-4" />
                 Download Image
               </a>
@@ -223,8 +171,8 @@ export function PublicityGenerator({ eventId }: { eventId: string }) {
               <div className="overflow-hidden rounded-xl">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  alt="Published publicity poster"
-                  className="aspect-square w-full object-cover"
+                  alt="Published Passion2Serve publicity poster"
+                  className="aspect-[4/5] w-full bg-muted object-contain"
                   src={draft.imageUrl}
                 />
               </div>
@@ -235,7 +183,7 @@ export function PublicityGenerator({ eventId }: { eventId: string }) {
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <Button asChild size="sm" variant="outline">
-                    <a download="publicity-poster.jpg" href={draft.imageUrl} target="_blank" rel="noopener noreferrer">
+                    <a download={posterFilename} href={draft.imageUrl} target="_blank" rel="noopener noreferrer">
                       <Download className="size-4" />
                       Download Image
                     </a>

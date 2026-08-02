@@ -5,7 +5,7 @@ import { PublicityGenerator } from "@/app/coordinator/events/[eventId]/lifecycle
 const DEMO_EVENT_ID = "00000000-0000-4000-8000-000000000001";
 
 export default function PublicityDemoPage() {
-  const hasOpenAI = Boolean(process.env.OPENAI_API_KEY);
+  const hasGemini = Boolean(process.env.GEMINI_API_KEY);
   const hasFal = Boolean(process.env.FAL_KEY);
 
   return (
@@ -13,7 +13,7 @@ export default function PublicityDemoPage() {
       <div>
         <h1 className="text-3xl font-bold">AI Publicity Generator</h1>
         <p className="mt-2 text-muted-foreground">
-          Test the full AI pipeline: concept generation (OpenAI) and image
+          Test the full AI pipeline: concept and caption generation (Gemini) and image
           generation (FLUX.1 schnell via fal.ai).
         </p>
       </div>
@@ -24,19 +24,19 @@ export default function PublicityDemoPage() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-3">
-            <Badge variant={hasOpenAI ? "success" : "warning"}>
-              OPENAI_API_KEY: {hasOpenAI ? "configured" : "missing (using mock)"}
+            <Badge variant={hasGemini ? "success" : "warning"}>
+              GEMINI_API_KEY: {hasGemini ? "configured" : "missing (using mock)"}
             </Badge>
             <Badge variant={hasFal ? "success" : "warning"}>
               FAL_KEY: {hasFal ? "configured" : "missing (using mock)"}
             </Badge>
             <Badge variant="outline">
-              Mode: {hasOpenAI && hasFal ? "Live AI" : "Demo / Mock"}
+              Mode: {hasGemini && hasFal ? "Live AI" : "Demo / Mock"}
             </Badge>
           </div>
-          {(!hasOpenAI || !hasFal) && (
+          {(!hasGemini || !hasFal) && (
             <p className="mt-3 text-sm text-muted-foreground">
-              Add <code className="rounded bg-muted px-1">OPENAI_API_KEY</code> and{" "}
+              Add <code className="rounded bg-muted px-1">GEMINI_API_KEY</code> and{" "}
               <code className="rounded bg-muted px-1">FAL_KEY</code> to{" "}
               <code className="rounded bg-muted px-1">.env.local</code> for live
               generation. Without them, the UI runs with realistic mock data and
@@ -65,12 +65,12 @@ export default function PublicityDemoPage() {
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-muted-foreground">
           <p>
-            <strong>1. Concept generation</strong> — OpenAI gpt-4o-mini proposes 3
+            <strong>1. Concept generation</strong> — Gemini Flash proposes 3
             visual directions based on event metadata (title, category, attendance,
             impact).
           </p>
           <p>
-            <strong>2. Image + caption</strong> — OpenAI generates a FLUX.1-optimized
+            <strong>2. Image + caption</strong> — Gemini generates a FLUX.1-optimized
             image prompt and social caption, then fal.ai renders the image in
             sub-second time using FLUX.1 [schnell] at $0.003/megapixel.
           </p>

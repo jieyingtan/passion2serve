@@ -241,7 +241,7 @@ export async function publishClosurePublicityAction(
 ): Promise<PublishActionResult> {
   const id = z.string().uuid().safeParse(eventId);
   const captionVal = z.string().min(1).safeParse(caption);
-  const imageVal = z.string().url().safeParse(imageUrl);
+  const imageVal = z.string().min(1).refine((value) => value.startsWith("/publicity-posters/") || z.string().url().safeParse(value).success).safeParse(imageUrl);
   if (!id.success || !captionVal.success || !imageVal.success) {
     return { success: false, error: "Invalid publish parameters." };
   }

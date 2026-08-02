@@ -15,46 +15,52 @@ interface Kpi {
 
 /** Server component: no interactivity, so it stays out of the client bundle. */
 export function KpiGrid({ summary, participation }: KpiGridProps) {
+  const certificateRate = summary.attended_total > 0
+    ? summary.certificates_issued / summary.attended_total
+    : null
+  const averagePoints = summary.participants_reached > 0
+    ? summary.points_awarded / summary.participants_reached
+    : null
   const kpis: Kpi[] = [
     {
-      label: 'Completed events',
+      label: 'Events delivered',
       value: formatNumber(summary.events_count),
       detail: `${formatNumber(summary.registrations_committed)} confirmed registrations`,
     },
     {
-      label: 'Attendance rate',
+      label: 'Participant participation rate',
       value: formatPercent(summary.attendance_rate),
-      detail: `${formatNumber(summary.attended_total)} attended · ${formatNumber(summary.no_show_total)} no-show`,
+      detail: `${formatNumber(summary.attended_total)} of ${formatNumber(summary.registrations_committed)} confirmed participants attended`,
     },
     {
-      label: 'Drop-off rate',
+      label: 'Registration drop-off rate',
       value: formatPercent(summary.drop_off_rate),
-      detail: `${formatNumber(summary.cancelled_total)} cancelled before the event`,
+      detail: `${formatNumber(summary.cancelled_total)} cancelled · ${formatNumber(summary.no_show_total)} did not attend`,
     },
     {
-      label: 'Participants reached',
-      value: formatNumber(summary.participants_reached),
-      detail: `${formatNumber(summary.returning_participants)} returning · ${formatPercent(summary.retention_rate, 0)} retention`,
+      label: 'Participant retention rate',
+      value: formatPercent(summary.retention_rate, 0),
+      detail: `${formatNumber(summary.returning_participants)} of ${formatNumber(summary.participants_reached)} participants returned`,
     },
     {
-      label: 'Volunteers confirmed',
-      value: formatNumber(participation.volunteers_confirmed),
-      detail: `${formatPercent(participation.volunteer_fill_rate, 0)} of a ${formatNumber(participation.volunteer_target_total)} target`,
+      label: 'Volunteer target achieved',
+      value: formatPercent(participation.volunteer_fill_rate, 0),
+      detail: `${formatNumber(participation.volunteers_confirmed)} confirmed against a target of ${formatNumber(participation.volunteer_target_total)}`,
     },
     {
-      label: 'Businesses confirmed',
-      value: formatNumber(participation.businesses_confirmed),
-      detail: `${formatPercent(participation.business_confirmation_rate, 0)} of ${formatNumber(participation.businesses_selected)} approached`,
+      label: 'Business participation rate',
+      value: formatPercent(participation.business_confirmation_rate, 0),
+      detail: `${formatNumber(participation.businesses_confirmed)} of ${formatNumber(participation.businesses_selected)} approached businesses confirmed`,
     },
     {
-      label: 'Certificates issued',
-      value: formatNumber(summary.certificates_issued),
-      detail: `${formatNumber(summary.course_completions)} course completions`,
+      label: 'Certificate coverage',
+      value: formatPercent(certificateRate, 0),
+      detail: `${formatNumber(summary.certificates_issued)} certificates for ${formatNumber(summary.attended_total)} attendees`,
     },
     {
-      label: 'Points awarded',
-      value: formatNumber(summary.points_awarded),
-      detail: `${formatNumber(summary.rewards_redeemed)} rewards redeemed`,
+      label: 'Average points earned',
+      value: averagePoints === null ? 'Not available' : formatNumber(Math.round(averagePoints)),
+      detail: `${formatNumber(summary.points_awarded)} total points · ${formatNumber(summary.rewards_redeemed)} rewards redeemed`,
     },
   ]
 

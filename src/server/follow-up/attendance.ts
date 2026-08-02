@@ -1,7 +1,6 @@
 import { buildCertificatePdf } from "@/lib/certificates/pdf";
 import { escapeEmailHtml, isMailjetConfigured, sendEmail } from "@/lib/mailjet/client";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isWhatsAppCloudConfigured, sendWhatsAppTemplate } from "@/lib/whatsapp/client";
 import { buildAttendanceAcknowledgementUrl } from "./delivery";
 
 export async function processAttendanceFollowUp(input: { eventId: string; participantId: string }) {
@@ -53,22 +52,8 @@ export async function processAttendanceFollowUp(input: { eventId: string; partic
   let whatsappStatus = "skipped";
   if (profile.whatsapp_consent && profile.phone) {
     const key = `attendance_ack:${input.eventId}:${input.participantId}`;
-    const { data: existing } = await admin.from("notification_deliveries").select("id,status").eq("idempotency_key", key).maybeSingle();
-    if (existing && ["sent", "delivered", "read"].includes(existing.status)) whatsappStatus = existing.status;
-    else if (isWhatsAppCloudConfigured() && process.env.WHATSAPP_ACK_TEMPLATE) {
-      const { data: delivery } = await admin.from("notification_deliveries").upsert({ participant_id: input.participantId, event_id: input.eventId, channel: "whatsapp", notification_type: "attendance_acknowledgement", idempotency_key: key, recipient: profile.phone, provider: "meta_cloud", status: "pending" }, { onConflict: "idempotency_key" }).select("id").single();
-      try {
-        const result = await sendWhatsAppTemplate({ to: profile.phone, templateName: process.env.WHATSAPP_ACK_TEMPLATE, bodyParameters: [profile.full_name, event.name, certificateNumber] });
-        whatsappStatus = "sent";
-        if (delivery) await admin.from("notification_deliveries").update({ status: "sent", provider_message_id: result.messageId, sent_at: new Date().toISOString() }).eq("id", delivery.id);
-      } catch (error) {
-        whatsappStatus = "failed";
-        if (delivery) await admin.from("notification_deliveries").update({ status: "failed", error: error instanceof Error ? error.message : "WhatsApp delivery failed." }).eq("id", delivery.id);
-      }
-    } else {
-      whatsappStatus = "manual";
-      await admin.from("notification_deliveries").upsert({ participant_id: input.participantId, event_id: input.eventId, channel: "whatsapp", notification_type: "attendance_acknowledgement", idempotency_key: key, recipient: profile.phone, provider: "wa_me", status: "manual", payload: { acknowledgementUrl } }, { onConflict: "idempotency_key" });
-    }
+    whatsappStatus = "manual";
+    await admin.from("notification_deliveries").upsert({ participant_id: input.participantId, event_id: input.eventId, channel: "whatsapp", notification_type: "attendance_acknowledgement", idempotency_key: key, recipient: profile.phone, provider: "wa_me", status: "manual", payload: { acknowledgementUrl } }, { onConflict: "idempotency_key" });
   }
   return { certificateNumber, emailStatus, whatsappStatus, acknowledgementUrl, pointsAwarded: 100, badgesAwarded: badgeCodes };
 }

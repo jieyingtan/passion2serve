@@ -106,7 +106,7 @@ export default async function ParticipantPassPage({
                 ))}
               </ul>
               <div className="mt-7 grid justify-items-start gap-3">
-                <WalletBadge href={pass?.apple_storage_path ? "/api/membership-pass/apple" : null} label="Apple Wallet" provider="apple" />
+                <WalletBadge href={pass?.apple_storage_path ? "/api/membership-pass/apple.pkpass" : null} label="Apple Wallet" provider="apple" />
                 <WalletBadge href={pass?.google_save_url} label="Google Wallet" provider="google" />
               </div>
               {(!pass?.apple_storage_path || !pass?.google_save_url) && <WalletAction t={t} />}

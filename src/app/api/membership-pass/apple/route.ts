@@ -7,7 +7,27 @@ import {
   issueAndEmailMembershipPass,
 } from "@/server/participants/wallet";
 
-export async function GET() {
+function safeWalletWalletShareUrl(value: string | null) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    const isWalletWalletHost = url.hostname === "walletwallet.dev" || url.hostname.endsWith(".walletwallet.dev");
+    return url.protocol === "https:" && isWalletWalletHost ? url : null;
+  } catch {
+    return null;
+  }
+}
+
+function supportsNativeWalletPreview(request: Request) {
+  const userAgent = request.headers.get("user-agent") ?? "";
+  const forwardedProtocol = request.headers.get("x-forwarded-proto");
+  const protocol = forwardedProtocol ?? new URL(request.url).protocol.replace(":", "");
+  const isAppleDevice = /iPhone|iPad|iPod|Macintosh/.test(userAgent);
+  const isSafari = /Safari/.test(userAgent) && !/CriOS|FxiOS|EdgiOS|OPiOS|Chrome|Chromium/.test(userAgent);
+  return protocol === "https" && isAppleDevice && isSafari;
+}
+
+export async function GET(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -17,7 +37,7 @@ export async function GET() {
 
   let { data: pass, error } = await supabase
     .from("membership_passes")
-    .select("apple_storage_path, status, last_synced_at")
+    .select("apple_storage_path, share_url, status, last_synced_at")
     .eq("participant_id", user.id)
     .maybeSingle();
 
@@ -57,7 +77,7 @@ export async function GET() {
 
     const refreshed = await supabase
       .from("membership_passes")
-      .select("apple_storage_path, status, last_synced_at")
+      .select("apple_storage_path, share_url, status, last_synced_at")
       .eq("participant_id", user.id)
       .maybeSingle();
     pass = refreshed.data;
@@ -66,6 +86,11 @@ export async function GET() {
     if (error || !pass?.apple_storage_path || pass.status !== "active") {
       return NextResponse.json({ error: "Your refreshed Apple Wallet pass is not ready." }, { status: 502 });
     }
+  }
+
+  const walletWalletFallback = safeWalletWalletShareUrl(pass.share_url);
+  if (!supportsNativeWalletPreview(request) && walletWalletFallback) {
+    return NextResponse.redirect(walletWalletFallback, { status: 307 });
   }
 
   let passBytes: Uint8Array;
@@ -81,7 +106,6 @@ export async function GET() {
   return new NextResponse(responseBody, {
     headers: {
       "Cache-Control": "private, no-store",
-      "Content-Disposition": 'attachment; filename="Passion2Serve.pkpass"',
       "Content-Length": String(passBytes.byteLength),
       "Content-Type": "application/vnd.apple.pkpass",
       "X-Content-Type-Options": "nosniff",

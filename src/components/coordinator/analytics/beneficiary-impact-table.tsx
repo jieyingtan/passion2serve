@@ -52,9 +52,6 @@ export function BeneficiaryImpactTable({ rows }: { rows: BeneficiaryImpactRow[] 
                   <th scope="col" className="px-3 py-2 text-right font-medium text-muted-foreground">
                     Certificates
                   </th>
-                  <th scope="col" className="px-3 py-2 text-right font-medium text-muted-foreground">
-                    Courses completed
-                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -93,9 +90,6 @@ export function BeneficiaryImpactTable({ rows }: { rows: BeneficiaryImpactRow[] 
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">
                       {formatNumber(row.certificates_issued)}
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums">
-                      {formatNumber(row.course_completions)}
                     </td>
                   </tr>
                 ))}

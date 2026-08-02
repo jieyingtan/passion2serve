@@ -5,13 +5,11 @@ import { AnalyticsFilters } from '@/components/coordinator/analytics/analytics-f
 import { PageHeader } from '@/components/page-header'
 import { AttendanceTrendChart } from '@/components/coordinator/analytics/attendance-trend-chart'
 import { BeneficiaryImpactTable } from '@/components/coordinator/analytics/beneficiary-impact-table'
-import { CompletionTrendsChart } from '@/components/coordinator/analytics/completion-trends-chart'
 import { KpiGrid } from '@/components/coordinator/analytics/kpi-grid'
 import {
   BusinessFunnelChart,
   VolunteerParticipationChart,
 } from '@/components/coordinator/analytics/participation-charts'
-import { SocialEngagementChart } from '@/components/coordinator/analytics/social-engagement-chart'
 import { formatDate } from '@/components/coordinator/analytics/format'
 import { parseAnalyticsFilters } from '@/lib/validation/analytics'
 import {
@@ -24,7 +22,7 @@ import {
 
 export const metadata: Metadata = {
   title: 'Impact analytics',
-  description: 'Attendance, participation, beneficiary impact and engagement across archived events.',
+  description: 'Participation rates, attendance and beneficiary impact across archived events.',
 }
 
 // Aggregates change whenever an event closes, so never serve a cached page.
@@ -103,23 +101,6 @@ export default async function AnalyticsPage({ searchParams }: PageProps) {
             <BeneficiaryImpactTable rows={analytics.beneficiaries} />
           </section>
 
-          <section aria-labelledby="social-heading" className="space-y-4">
-            <h2 id="social-heading" className="text-lg font-medium">
-              Social media engagement
-            </h2>
-            <SocialEngagementChart
-              trend={analytics.socialTrend}
-              totals={analytics.socialTotals}
-              bucket={filters.bucket}
-            />
-          </section>
-
-          <section aria-labelledby="completion-heading" className="space-y-4">
-            <h2 id="completion-heading" className="text-lg font-medium">
-              Event and course completion
-            </h2>
-            <CompletionTrendsChart rows={analytics.completionTrend} bucket={filters.bucket} />
-          </section>
         </div>
       ) : (
         <div className="rounded-lg border border-dashed p-8 text-center sm:p-12">

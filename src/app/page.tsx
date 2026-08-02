@@ -11,16 +11,18 @@ const roles = [
   {
     title: "Coordinator workspace",
     description: "Plan events, match partners and volunteers, record attendance, and report impact.",
-    href: "/coordinator/dashboard",
+    href: "/demo/coordinator",
     icon: CalendarCheck,
-    cta: "Open coordinator demo",
+    cta: "View coordinator guide",
+    steps: "6-step walkthrough",
   },
   {
     title: "Participant experience",
     description: "Discover events, access your membership pass, and follow your learning journey.",
-    href: "/participant/events",
+    href: "/demo/participant",
     icon: UsersRound,
-    cta: "Open participant demo",
+    cta: "View participant guide",
+    steps: "7-step walkthrough",
   },
 ];
 
@@ -98,6 +100,7 @@ export default async function HomePage() {
                   </div>
                   <h2 className="mt-6 text-2xl font-bold">{role.title}</h2>
                   <p className="mt-2 flex-1 leading-7 text-muted-foreground">{role.description}</p>
+                  <p className="mt-4 text-xs font-bold uppercase tracking-[0.14em] text-primary">{role.steps} · No account needed</p>
                   <Link className="mt-6 inline-flex items-center gap-2 font-semibold text-primary" href={role.href}>
                     {role.cta} <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
                   </Link>

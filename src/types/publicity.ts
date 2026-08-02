@@ -24,9 +24,10 @@ export const visualConceptSchema = z.object({
 export type VisualConcept = z.infer<typeof visualConceptSchema>;
 
 export const publicityDraftSchema = z.object({
-  imageUrl: z.string().url(),
+  imageUrl: z.string().min(1).refine((value) => value.startsWith("/publicity-posters/") || z.string().url().safeParse(value).success),
   imagePrompt: z.string(),
   caption: z.string(),
+  generationNote: z.string().optional(),
 });
 
 export type PublicityDraft = z.infer<typeof publicityDraftSchema>;

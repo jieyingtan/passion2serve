@@ -14,7 +14,6 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
-  MessagesSquare,
   MoreHorizontal,
   PlusCircle,
   QrCode,
@@ -40,7 +39,6 @@ const navigationIcons = {
   profile: UserRound,
   ongoing: Radio,
   upcoming: CalendarClock,
-  integrations: MessagesSquare,
 };
 
 export interface NavigationItem {

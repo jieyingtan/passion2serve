@@ -16,7 +16,7 @@ const testMetadata: EventClosureMetadata = {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const step = searchParams.get("step") ?? "concepts";
-  const isDemo = !process.env.OPENAI_API_KEY;
+  const isDemo = !process.env.GEMINI_API_KEY;
 
   try {
     if (step === "concepts") {
@@ -42,6 +42,7 @@ export async function GET(request: Request) {
         captionLength: draft.caption.length,
         imagePrompt: draft.imagePrompt,
         caption: draft.caption,
+        generationNote: draft.generationNote,
       });
     }
 
