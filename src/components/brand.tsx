@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { HeartHandshake } from "lucide-react";
+import Image from "next/image";
 
 export function Brand({ compact = false }: { compact?: boolean }) {
   return (
     <Link className="inline-flex items-center gap-3" href="/">
-      <span className="grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground shadow-soft">
-        <HeartHandshake aria-hidden="true" className="size-5" />
+      <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-white shadow-soft ring-1 ring-border/60">
+        <Image alt="Passion To Serve" className="size-9 object-contain" height={36} priority src="/icon.svg" width={36} />
       </span>
       {!compact && (
         <span>

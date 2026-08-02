@@ -1,13 +1,26 @@
 import Image from "next/image";
-import { Check, Download, QrCode, Smartphone } from "lucide-react";
+import { Check, QrCode, Smartphone } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
 import { getTranslations } from "@/lib/i18n";
 import { isQrConfigured } from "@/lib/config";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/server/auth";
 import { WalletAction } from "./wallet-action";
+
+function WalletIcon({ provider }: { provider: "apple" | "google" }) {
+  if (provider === "apple") {
+    return <span className="relative block size-12 shrink-0 overflow-hidden rounded-lg bg-[#f0eee3] shadow-inner"><span className="absolute inset-x-1 top-1 h-2 rounded bg-[#36a8e0]"/><span className="absolute inset-x-1 top-3 h-2 rounded bg-[#f6bd18]"/><span className="absolute inset-x-1 top-5 h-2 rounded bg-[#34b97a]"/><span className="absolute inset-x-1 top-7 h-2 rounded bg-[#ef6258]"/></span>;
+  }
+  return <span className="relative block size-12 shrink-0"><span className="absolute left-1 top-2 h-8 w-10 rotate-[-7deg] rounded-xl bg-[#b8ecd0]"/><span className="absolute left-1 top-3 h-8 w-10 rotate-[5deg] rounded-xl bg-[#ffe5a5]"/><span className="absolute left-1 top-4 h-8 w-10 rotate-[-2deg] rounded-xl bg-[#f5bfc0]"/><span className="absolute left-1 top-5 h-8 w-10 rounded-xl bg-[#b8d1ff] [clip-path:polygon(0_20%,100%_0,100%_100%,0_100%)]"/></span>;
+}
+
+function WalletBadge({ href, provider, label }: { href?: string | null; provider: "apple" | "google"; label: string }) {
+  const classes = "flex h-[72px] w-full max-w-[310px] items-center gap-4 rounded-2xl px-5 text-left text-white shadow-sm transition sm:w-[310px]";
+  const content = <><WalletIcon provider={provider}/><span className="leading-none"><span className="block text-lg font-medium">Add to</span><span className="mt-1 block text-2xl font-semibold tracking-tight">{label}</span></span></>;
+  return href ? <a aria-label={`Add to ${label}`} className={`${classes} bg-black hover:-translate-y-0.5 hover:bg-black/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2`} href={href}>{content}</a> : <span aria-disabled="true" className={`${classes} cursor-not-allowed bg-neutral-400 opacity-70`}>{content}</span>;
+}
 
 export default async function ParticipantPassPage({
   searchParams,
@@ -24,15 +37,14 @@ export default async function ParticipantPassPage({
   const { data: pass } = profile
     ? await supabase
         .from("membership_passes")
-        .select("share_url, google_save_url")
+        .select("apple_storage_path, google_save_url")
         .eq("participant_id", profile.id)
         .maybeSingle()
     : { data: null };
 
   return (
     <div className="mx-auto max-w-5xl">
-      <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t.pass.title}</h1>
-      <p className="mt-2 text-muted-foreground">{t.pass.subtitle}</p>
+      <PageHeader eyebrow="Participant membership" title={t.pass.title} description={t.pass.subtitle} />
       {query.activated === "1" && (
         <p className="mt-5 rounded-xl bg-emerald-100 px-4 py-3 text-sm font-semibold text-emerald-800" role="status">
           {t.pass.signupSuccess} {query.wallet === "pending" ? t.pass.walletPending : t.pass.walletSent}
@@ -81,7 +93,7 @@ export default async function ParticipantPassPage({
         <div className="space-y-5">
           <Card className="border-0">
             <CardContent className="p-5 sm:p-7">
-              <h2 className="text-xl font-bold">{t.pass.alwaysReady}</h2>
+              <h2 className="rounded-xl bg-accent/70 px-4 py-3 text-xl font-black">{t.pass.alwaysReady}</h2>
               <p className="mt-2 leading-7 text-muted-foreground">
                 {t.pass.alwaysReadyDesc}
               </p>
@@ -93,23 +105,11 @@ export default async function ParticipantPassPage({
                   </li>
                 ))}
               </ul>
-              <div className="mt-7 grid gap-3 sm:flex sm:flex-wrap">
-                {pass?.share_url ? (
-                  <Button asChild className="w-full sm:w-auto">
-                    <a href={pass.share_url} rel="noreferrer" target="_blank"><Download className="size-4" /> {t.pass.addAppleWallet}</a>
-                  </Button>
-                ) : (
-                  <Button className="w-full sm:w-auto" disabled><Download className="size-4" /> {t.pass.addAppleWallet}</Button>
-                )}
-                {pass?.google_save_url ? (
-                  <Button asChild className="w-full sm:w-auto" variant="outline">
-                    <a href={pass.google_save_url} rel="noreferrer" target="_blank"><Download className="size-4" /> {t.pass.addGoogleWallet}</a>
-                  </Button>
-                ) : (
-                  <Button className="w-full sm:w-auto" disabled variant="outline"><Download className="size-4" /> {t.pass.addGoogleWallet}</Button>
-                )}
+              <div className="mt-7 grid justify-items-start gap-3">
+                <WalletBadge href={pass?.apple_storage_path ? "/api/membership-pass/apple" : null} label="Apple Wallet" provider="apple" />
+                <WalletBadge href={pass?.google_save_url} label="Google Wallet" provider="google" />
               </div>
-              {!pass?.share_url && !pass?.google_save_url && <WalletAction t={t} />}
+              {(!pass?.apple_storage_path || !pass?.google_save_url) && <WalletAction t={t} />}
             </CardContent>
           </Card>
           <p className="px-2 text-xs leading-5 text-muted-foreground">

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Sparkles } from "lucide-react";
 
 import { EventStageTabs } from "@/components/coordinator/event-stage-tabs";
+import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatEventDate } from "@/lib/events/stages";
@@ -16,9 +17,7 @@ export default async function CreateEventPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-8">
-      <p className="text-sm font-semibold text-primary">Create</p>
-      <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">Plan a new event</h1>
-      <p className="mt-2 text-muted-foreground">Add the essentials and review matching recommendations before outreach.</p>
+      <PageHeader eyebrow="Create" title="Plan a new event" description="Add the essentials and review matching recommendations before outreach." />
       <EventStageTabs active="create" />
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <Card className="border-0">

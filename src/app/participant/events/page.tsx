@@ -2,6 +2,7 @@ import { CalendarPlus, CheckCircle2, MailCheck, MapPin, Sparkles, Users } from "
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader, SectionHeader } from "@/components/page-header";
 import { formatDate, getTranslations } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/server/auth";
@@ -120,13 +121,9 @@ export default async function ParticipantEventsPage({
   return (
     <div className="mx-auto max-w-7xl space-y-10">
       <div>
-        <div className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1.5 text-sm font-semibold text-primary">
-          <Sparkles className="size-4" /> {t.discover.badge}
-        </div>
-        <h1 className="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">{t.discover.title}</h1>
-        <p className="mt-2 text-muted-foreground">{t.discover.subtitle}</p>
+        <PageHeader eyebrow={<span className="inline-flex items-center gap-2"><Sparkles className="size-4" />{t.discover.badge}</span>} title={t.discover.title} description={t.discover.subtitle} />
         {query.signup === "1" && (
-          <p className="mt-5 rounded-xl bg-emerald-100 px-4 py-3 text-sm font-semibold text-emerald-800" role="status">
+          <p className="mt-4 rounded-xl bg-emerald-100 px-4 py-3 text-sm font-semibold text-emerald-800" role="status">
             {t.discover.signupSuccess} {query.wallet === "pending" ? t.discover.walletPending : t.discover.walletSent}
           </p>
         )}
@@ -135,8 +132,8 @@ export default async function ParticipantEventsPage({
         <Card className="border-0"><CardContent className="grid min-h-64 place-items-center p-8 text-center"><div><CalendarPlus className="mx-auto size-10 text-primary" /><h2 className="mt-4 text-xl font-bold">{t.discover.noEvents}</h2><p className="mt-2 text-muted-foreground">{t.discover.noEventsSub}</p></div></CardContent></Card>
       ) : (
         <>
-          <section className="space-y-4"><div><h2 className="text-2xl font-bold">{t.discover.invitedEvents}</h2><p className="mt-1 text-sm text-muted-foreground">{t.discover.invitedEventsSub}</p></div>{eventGrid(invitedEvents, true)}</section>
-          <section className="space-y-4"><div><h2 className="text-2xl font-bold">{t.discover.otherEvents}</h2><p className="mt-1 text-sm text-muted-foreground">{t.discover.otherEventsSub}</p></div>{eventGrid(openEvents, false)}</section>
+          <section><SectionHeader title={t.discover.invitedEvents} description={t.discover.invitedEventsSub} />{eventGrid(invitedEvents, true)}</section>
+          <section><SectionHeader title={t.discover.otherEvents} description={t.discover.otherEventsSub} />{eventGrid(openEvents, false)}</section>
         </>
       )}
     </div>

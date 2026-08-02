@@ -140,7 +140,7 @@ export function AppShell({ children, navigation, profileHref, roleLabel, sidebar
           </div>
           <div className="flex items-center gap-2">
             <span className="hidden max-w-40 truncate text-sm font-semibold sm:block lg:hidden">{userName}</span>
-            <Link aria-label="Open profile" className="grid size-10 place-items-center rounded-full bg-secondary text-sm font-bold text-secondary-foreground transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" href={profileHref}>
+            <Link aria-label="Open profile" className="grid size-10 place-items-center rounded-full bg-secondary text-sm font-bold text-secondary-foreground shadow-sm transition-all hover:scale-105 hover:ring-2 hover:ring-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" href={profileHref} title="Open profile">
               {userName
                 .split(" ")
                 .map((part) => part[0])

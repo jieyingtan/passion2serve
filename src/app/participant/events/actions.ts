@@ -37,7 +37,7 @@ export async function registerForEvent(
   revalidatePath("/participant/calendar");
   revalidatePath(`/coordinator/events/${eventId.data}/participants`);
   revalidatePath(`/coordinator/events/${eventId.data}/lifecycle`);
-  return { success: nextStatus === "confirmed" ? "Attendance confirmed." : nextStatus === "waitlisted" ? "The event is full. You have joined the waitlist." : nextStatus === "ineligible" ? "Complete the listed prerequisites before registering." : "Registration complete." };
+  return { success: nextStatus === "confirmed" ? "Registration confirmed." : nextStatus === "waitlisted" ? "The event is full. You have joined the waitlist." : nextStatus === "ineligible" ? "Complete the listed prerequisites before registering." : "Registration complete." };
 }
 
 export async function cancelRegistration(_previousState: EventRegistrationState, formData: FormData): Promise<EventRegistrationState> {

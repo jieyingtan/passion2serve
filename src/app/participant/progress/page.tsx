@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { Award, Check, Coins, Gift, LockKeyhole, Route, Sparkles } from "lucide-react";
+import { Award, Check, Coins, Gift, LockKeyhole, MessageSquareText, Route, Sparkles, Star } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader, SectionHeader } from "@/components/page-header";
 import { getTranslations } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/server/auth";
@@ -25,6 +26,7 @@ export default async function ParticipantProgressPage() {
     { data: events },
     { data: ledger },
     { data: participantBadges },
+    { data: allBadges },
     { data: rewards },
     { data: redemptions },
     { data: feedback },
@@ -34,10 +36,11 @@ export default async function ParticipantProgressPage() {
     supabase.from("attendance").select("event_id,scanned_at,events(course_id,name)").eq("participant_id", user.id),
     supabase.from("events").select("id,name,course_id,starts_at,status").in("status", ["ongoing", "upcoming"]).order("starts_at"),
     supabase.from("point_ledger").select("points,reason,created_at").eq("participant_id", user.id),
-    supabase.from("participant_badges").select("awarded_at,badges(name,description,icon)").eq("participant_id", user.id).order("awarded_at", { ascending: false }),
+    supabase.from("participant_badges").select("badge_id,awarded_at,badges(name,description,icon)").eq("participant_id", user.id).order("awarded_at", { ascending: false }),
+    supabase.from("badges").select("id,name,description,icon").eq("active",true).order("created_at"),
     supabase.from("rewards").select("id,name,description,sponsor_name,points_cost,stock").eq("active", true).order("points_cost"),
     supabase.from("reward_redemptions").select("points_spent,status").eq("participant_id", user.id).neq("status", "cancelled"),
-    supabase.from("participant_feedback").select("event_id").eq("participant_id", user.id),
+    supabase.from("participant_feedback").select("event_id,rating,feedback,personal_story,story_consent,updated_at,events(name)").eq("participant_id", user.id).order("updated_at", { ascending: false }),
   ]);
 
   const earned = (ledger ?? []).reduce((sum, item) => sum + item.points, 0);
@@ -56,6 +59,7 @@ export default async function ParticipantProgressPage() {
     ]);
   });
   const feedbackEventIds = new Set((feedback ?? []).map((item) => item.event_id));
+  const earnedBadgeIds = new Set((participantBadges ?? []).map((item)=>item.badge_id));
   const feedbackEvents = (attendance ?? []).flatMap((record) => {
     const event = Array.isArray(record.events) ? record.events[0] : record.events;
     return event && !feedbackEventIds.has(record.event_id) ? [{ id: record.event_id, name: event.name }] : [];
@@ -68,11 +72,7 @@ export default async function ParticipantProgressPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">
-      <div>
-        <span className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1.5 text-sm font-semibold text-primary"><Route className="size-4" />{t.progress.badge}</span>
-        <h1 className="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">{t.progress.title}</h1>
-        <p className="mt-2 text-muted-foreground">{t.progress.subtitle}</p>
-      </div>
+      <PageHeader eyebrow={<span className="inline-flex items-center gap-2"><Route className="size-4" />{t.progress.badge}</span>} title={t.progress.title} description={t.progress.subtitle} />
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="border-0"><CardContent className="p-5"><Coins className="size-5 text-primary" /><p className="mt-3 text-sm text-muted-foreground">{t.progress.availablePoints}</p><p className="text-3xl font-bold">{balance}</p></CardContent></Card>
@@ -81,7 +81,7 @@ export default async function ParticipantProgressPage() {
       </div>
 
       <section>
-        <h2 className="mb-4 text-2xl font-bold">{t.progress.learningPathway}</h2>
+        <SectionHeader title={t.progress.learningPathway} description={t.progress.subtitle} />
         <div className="grid gap-6 lg:grid-cols-3">
           {pathwayGroups.map((group) => {
             const groupCourses = (courses ?? []).filter((course) => course.event_type === group.eventType);
@@ -127,23 +127,47 @@ export default async function ParticipantProgressPage() {
       </section>
 
       <section>
-        <h2 className="mb-4 text-2xl font-bold">{t.progress.achievements}</h2>
+        <SectionHeader title={t.progress.achievements} />
         <div className="grid gap-4 md:grid-cols-3">
-          {participantBadges?.length ? participantBadges.map((item, index) => {
-            const badge = Array.isArray(item.badges) ? item.badges[0] : item.badges;
-            return <Card className="border-0 bg-amber-50" key={`${badge?.name}-${index}`}><CardContent className="p-5"><Award className="size-6 text-amber-700" /><p className="mt-3 font-bold">{badge?.name}</p><p className="mt-1 text-sm text-muted-foreground">{badge?.description}</p></CardContent></Card>;
-          }) : <p className="text-sm text-muted-foreground">{t.progress.noBadges}</p>}
+          {(allBadges??[]).map((badge) => {const active=earnedBadgeIds.has(badge.id);return <Card className={active?"border-amber-300 bg-gradient-to-br from-amber-50 to-orange-50 shadow-soft":"border-dashed bg-muted/50 grayscale"} key={badge.id}><CardContent className="p-5"><div className={`grid size-12 place-items-center rounded-full ${active?"bg-amber-400 text-amber-950":"bg-muted text-muted-foreground"}`}><Award className="size-6" /></div><div className="mt-4 flex items-center justify-between gap-2"><p className="font-bold">{badge.name}</p><Badge variant={active?"success":"secondary"}>{active?"Achieved":"Locked"}</Badge></div><p className="mt-2 text-sm text-muted-foreground">{badge.description}</p></CardContent></Card>})}
         </div>
       </section>
 
       <section>
-        <h2 className="mb-4 text-2xl font-bold">{t.progress.sponsorRewards}</h2>
+        <SectionHeader title={t.progress.sponsorRewards} />
         <div className="grid gap-4 md:grid-cols-3">
           {(rewards ?? []).map((reward) => <Card className="border-0" key={reward.id}><CardHeader><CardTitle>{reward.name}</CardTitle></CardHeader><CardContent><p className="text-sm text-muted-foreground">{reward.description}</p><p className="mt-3 text-sm">{t.progress.sponsoredBy} <strong>{reward.sponsor_name}</strong></p><p className="mt-3 font-bold text-primary">{t.progress.points.replace("{count}", String(reward.points_cost))}</p><RewardButton disabled={balance < reward.points_cost || reward.stock === 0} rewardId={reward.id} t={t} /></CardContent></Card>)}
         </div>
       </section>
 
-      {feedbackEvents.length > 0 && <section><h2 className="mb-4 text-2xl font-bold">{t.progress.feedback}</h2><div className="grid gap-4 md:grid-cols-2">{feedbackEvents.map((event) => <FeedbackForm eventId={event.id} eventName={event.name} key={event.id} t={t} />)}</div></section>}
+      {feedbackEvents.length > 0 && <section><SectionHeader title={t.progress.feedback} description="Share your experience and earn 10 points." /><div className="grid gap-4 md:grid-cols-2">{feedbackEvents.map((event) => <FeedbackForm eventId={event.id} eventName={event.name} key={event.id} t={t} />)}</div></section>}
+
+      {(feedback ?? []).length > 0 && (
+        <section>
+          <SectionHeader title="Your submitted feedback" description="Your latest response for each attended event is shown here." />
+          <div className="grid gap-4 md:grid-cols-2">
+            {(feedback ?? []).map((item) => {
+              const event = Array.isArray(item.events) ? item.events[0] : item.events;
+              return (
+                <Card className="border-0" key={item.event_id}>
+                  <CardContent className="p-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent text-primary"><MessageSquareText className="size-5" /></span>
+                        <div className="min-w-0"><p className="truncate font-bold">{event?.name ?? "Passion2Serve event"}</p><p className="text-xs text-muted-foreground">Submitted feedback</p></div>
+                      </div>
+                      <div className="flex shrink-0" aria-label={`${item.rating} out of 5 stars`}>{Array.from({ length: 5 }, (_, index) => <Star className={`size-4 ${index < item.rating ? "fill-amber-400 text-amber-400" : "text-muted"}`} key={index} />)}</div>
+                    </div>
+                    <p className="mt-4 rounded-xl bg-muted p-4 text-sm leading-6">{item.feedback}</p>
+                    {item.personal_story && <p className="mt-3 text-sm leading-6 text-muted-foreground"><strong className="text-foreground">Your story:</strong> {item.personal_story}</p>}
+                    <p className="mt-4 text-xs font-semibold text-muted-foreground">{item.story_consent ? "Approved to appear anonymously on the Passion2Serve landing page." : "Private — not shown on the public landing page."}</p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

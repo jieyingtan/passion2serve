@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Archive, ArrowRight, CalendarClock, ClipboardCheck, Pencil, Plus, Radio } from "lucide-react";
 
 import { EventStageTabs } from "@/components/coordinator/event-stage-tabs";
+import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,14 +32,7 @@ export async function EventStagePage({ status }: { status: Exclude<EventStage, "
 
   return (
     <div className="mx-auto max-w-7xl space-y-8">
-      <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
-        <div>
-          <p className="text-sm font-semibold text-primary">Coordinator event pipeline</p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{stage.label} events</h1>
-          <p className="mt-2 max-w-3xl text-muted-foreground">{stage.description}</p>
-        </div>
-        <Button asChild className="w-full sm:w-auto"><Link href="/coordinator/events/new"><Plus className="size-4" /> Create event</Link></Button>
-      </div>
+      <PageHeader eyebrow="Coordinator event pipeline" title={`${stage.label} events`} description={stage.description} actions={<Button asChild className="w-full sm:w-auto"><Link href="/coordinator/events/new"><Plus className="size-4" /> Create event</Link></Button>} />
 
       <EventStageTabs active={status} />
 

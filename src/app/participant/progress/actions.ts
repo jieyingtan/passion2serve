@@ -23,8 +23,9 @@ export async function saveFeedback(_state: RetentionState, formData: FormData): 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Sign in to share feedback." };
-  const { error } = await supabase.from("participant_feedback").upsert({ participant_id: user.id, event_id: parsed.data.eventId, rating: parsed.data.rating, feedback: parsed.data.feedback, personal_story: parsed.data.personalStory || null, story_consent: parsed.data.storyConsent === "on" }, { onConflict: "participant_id,event_id" });
+  const { data: awarded, error } = await supabase.rpc("submit_participant_feedback", { target_event_id: parsed.data.eventId, target_rating: parsed.data.rating, target_feedback: parsed.data.feedback, target_personal_story: parsed.data.personalStory || null, target_story_consent: parsed.data.storyConsent === "on" });
   if (error) return { error: "Feedback could not be saved." };
   revalidatePath("/participant/progress");
-  return { success: "Thank you. Your feedback has been saved." };
+  revalidatePath("/");
+  return { success: awarded ? "Thank you. Your feedback has been saved and 10 points were added." : "Your feedback has been updated." };
 }

@@ -1,15 +1,15 @@
 import Link from "next/link";
-import { Activity, AlertCircle, ArrowRight, Building2, CalendarClock, CalendarDays, CheckCircle2, Clock3, Plus, UsersRound } from "lucide-react";
+import { AlertCircle, ArrowRight, Building2, CalendarClock, CalendarDays, CheckCircle2, Plus, UsersRound } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader, SectionHeader } from "@/components/page-header";
 import { Progress } from "@/components/ui/progress";
-import { dateKeyInSingapore, eventHref, readinessLabel, singaporeTimeZone, type CalendarEvent } from "@/lib/events/calendar";
+import { dateKeyInSingapore, eventHref, monthGridKeys, readinessLabel, singaporeTimeZone, type CalendarEvent } from "@/lib/events/calendar";
 import { eventStages, formatEventDate, type EventStage } from "@/lib/events/stages";
 import { cn } from "@/lib/utils";
 import { listCoordinatorCalendarEvents } from "@/server/events/calendar";
-import { listRecentEventActivity } from "@/server/events/dashboard";
 
 const stageVisuals: Record<EventStage, { border: string; dot: string; soft: string }> = {
   create: { border: "border-t-sky-500", dot: "bg-sky-500", soft: "bg-sky-50 text-sky-800" },
@@ -49,10 +49,7 @@ function DashboardError({ children }: { children: React.ReactNode }) {
 }
 
 export default async function CoordinatorDashboardPage() {
-  const [{ events, error: eventsError }, { activity, error: activityError }] = await Promise.all([
-    listCoordinatorCalendarEvents(),
-    listRecentEventActivity(),
-  ]);
+  const { events, error: eventsError } = await listCoordinatorCalendarEvents();
   const now = new Date();
   const todayKey = dateKeyInSingapore(now);
   const today = new Intl.DateTimeFormat("en-SG", { dateStyle: "full", timeZone: singaporeTimeZone }).format(now);
@@ -63,11 +60,19 @@ export default async function CoordinatorDashboardPage() {
       const priority = { awaiting_closure: 0, ongoing: 1, create: 2, upcoming: 3, archived: 4 };
       return priority[a.status] - priority[b.status] || new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime();
     });
-  const upcomingEvents = events
-    .filter((event) => event.status === "upcoming" && new Date(event.endsAt ?? event.startsAt).getTime() >= now.getTime())
+  const scheduledUpcomingEvents = events
+    .filter((event) => event.status === "upcoming")
     .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
+  const upcomingEvents = scheduledUpcomingEvents.filter((event) => new Date(event.endsAt ?? event.startsAt).getTime() >= now.getTime());
   const nextEvent = upcomingEvents[0] ?? null;
-  const upcomingThisMonth = upcomingEvents.filter((event) => dateKeyInSingapore(event.startsAt).slice(0, 7) === todayKey.slice(0, 7)).length;
+  const upcomingThisMonth = scheduledUpcomingEvents.filter((event) => dateKeyInSingapore(event.startsAt).slice(0, 7) === todayKey.slice(0, 7)).length;
+  const monthKeys = monthGridKeys(todayKey);
+  const monthLabel = new Intl.DateTimeFormat("en-SG", { month: "long", year: "numeric", timeZone: singaporeTimeZone }).format(now);
+  const upcomingByDay = new Map<string, CalendarEvent[]>();
+  scheduledUpcomingEvents.forEach((event) => {
+    const key = dateKeyInSingapore(event.startsAt);
+    upcomingByDay.set(key, [...(upcomingByDay.get(key) ?? []), event]);
+  });
   const metrics = [
     { label: "Needs attention", value: needsAttention.length, note: "Events with a next action", icon: AlertCircle, tone: "text-amber-700 bg-amber-50" },
     { label: "Next event", value: nextEvent ? new Intl.DateTimeFormat("en-SG", { day: "numeric", month: "short", timeZone: singaporeTimeZone }).format(new Date(nextEvent.startsAt)) : "—", note: nextEvent?.name ?? "Nothing scheduled", icon: CalendarClock, tone: "text-emerald-700 bg-emerald-50" },
@@ -77,14 +82,7 @@ export default async function CoordinatorDashboardPage() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-7">
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div>
-          <p className="text-sm font-semibold text-primary">{today}</p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">Event workspace</h1>
-          <p className="mt-2 text-muted-foreground">Focus on what needs action and keep delivery on schedule.</p>
-        </div>
-        <Button asChild className="w-full sm:w-auto"><Link href="/coordinator/events/new"><Plus className="size-4" />Create event</Link></Button>
-      </div>
+      <PageHeader eyebrow={today} title="Event workspace" description="Focus on what needs action and keep delivery on schedule." actions={<Button asChild className="w-full sm:w-auto"><Link href="/coordinator/events/new"><Plus className="size-4" />Create event</Link></Button>} />
 
       {eventsError && <DashboardError>Dashboard events could not be loaded: {eventsError}</DashboardError>}
 
@@ -104,9 +102,7 @@ export default async function CoordinatorDashboardPage() {
       </div>
 
       <section aria-labelledby="pipeline-title">
-        <div className="mb-3 flex items-end justify-between gap-4">
-          <div><h2 className="text-lg font-bold" id="pipeline-title">Event lifecycle</h2><p className="text-sm text-muted-foreground">Select a stage to view its events.</p></div>
-        </div>
+        <SectionHeader title={<span id="pipeline-title">Event lifecycle</span>} description="Select a stage to view its events." />
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           {eventStages.map((stage) => {
             const visual = stageVisuals[stage.status];
@@ -115,7 +111,7 @@ export default async function CoordinatorDashboardPage() {
               <Link className="group" href={stage.href} key={stage.status}>
                 <Card className={cn("h-full border-t-4 shadow-none transition-all group-hover:-translate-y-0.5 group-hover:shadow-soft", visual.border)}>
                   <CardContent className="p-4">
-                    <div className="flex items-center justify-between gap-2"><span className="flex items-center gap-2 text-sm font-semibold"><span className={cn("size-2.5 rounded-full", visual.dot)} />{stage.label}</span><ArrowRight className="size-4 transition-transform group-hover:translate-x-1" /></div>
+                    <div className="flex items-center justify-between gap-2"><span className="flex items-center gap-2 text-sm font-black"><span className={cn("size-2.5 rounded-full", visual.dot)} />{stage.label}</span><ArrowRight className="size-4 transition-transform group-hover:translate-x-1" /></div>
                     <div className="mt-4 flex items-end justify-between"><span className="text-3xl font-bold">{counts[stage.status]}</span>{actionCount > 0 && <span className={cn("rounded-full px-2 py-1 text-[11px] font-bold", visual.soft)}>{actionCount} to action</span>}</div>
                   </CardContent>
                 </Card>
@@ -127,8 +123,8 @@ export default async function CoordinatorDashboardPage() {
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.75fr)_minmax(300px,1fr)]">
         <Card className="border-0">
-          <CardHeader className="flex-row items-start justify-between gap-4 p-5 sm:p-6">
-            <div><CardTitle>Action required</CardTitle><p className="mt-1 text-sm text-muted-foreground">Prioritised by lifecycle stage and event date.</p></div>
+          <CardHeader className="flex-row items-start justify-between gap-4 rounded-t-xl bg-accent/70 p-5 sm:p-6">
+            <div><CardTitle className="text-xl font-black">Action required</CardTitle><p className="mt-1 text-sm text-muted-foreground">Prioritised by lifecycle stage and event date.</p></div>
             <Badge variant={needsAttention.length ? "warning" : "success"}>{needsAttention.length || "All clear"}</Badge>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -157,26 +153,17 @@ export default async function CoordinatorDashboardPage() {
         </Card>
 
         <Card className="border-0">
-          <CardHeader className="flex-row items-start justify-between gap-3"><div><CardTitle>Upcoming schedule</CardTitle><p className="mt-1 text-sm text-muted-foreground">Events ready for delivery.</p></div><Button asChild size="sm" variant="ghost"><Link href="/coordinator/calendar">Calendar<ArrowRight className="size-4" /></Link></Button></CardHeader>
-          <CardContent className="space-y-3">
-            {!upcomingEvents.length ? <div className="rounded-xl border border-dashed p-8 text-center"><CalendarDays className="mx-auto size-8 text-muted-foreground" /><p className="mt-3 font-semibold">No upcoming events</p><p className="mt-1 text-sm text-muted-foreground">Ready events will appear here.</p></div> : upcomingEvents.slice(0, 4).map((event) => {
-              const date = new Date(event.startsAt);
-              return <Link className="flex gap-3 rounded-xl border p-3 transition-colors hover:bg-accent/40" href={eventHref(event)} key={event.id}><span className="grid size-12 shrink-0 place-items-center rounded-lg bg-emerald-50 text-center text-emerald-800"><span><span className="block text-[10px] font-bold uppercase">{new Intl.DateTimeFormat("en-SG", { month: "short", timeZone: singaporeTimeZone }).format(date)}</span><span className="block text-lg font-bold leading-4">{new Intl.DateTimeFormat("en-SG", { day: "numeric", timeZone: singaporeTimeZone }).format(date)}</span></span></span><span className="min-w-0"><span className="block truncate font-semibold">{event.name}</span><span className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><Clock3 className="size-3" />{new Intl.DateTimeFormat("en-SG", { hour: "numeric", minute: "2-digit", timeZone: singaporeTimeZone }).format(date)}</span><span className="mt-0.5 block truncate text-xs text-muted-foreground">{event.venue}</span></span></Link>;
-            })}
+          <CardHeader className="flex-row items-start justify-between gap-3 rounded-t-xl bg-accent/70"><div><CardTitle className="text-xl font-black">Upcoming schedule</CardTitle><p className="mt-1 text-sm text-muted-foreground">Colored dates have scheduled events.</p></div><Button asChild size="sm" variant="outline"><Link href="/coordinator/calendar">Calendar<ArrowRight className="size-4" /></Link></Button></CardHeader>
+          <CardContent>
+            <div className="rounded-xl border bg-card p-3">
+              <p className="mb-3 text-center text-sm font-bold">{monthLabel}</p>
+              <div className="grid grid-cols-7 text-center text-[10px] font-bold uppercase text-muted-foreground">{["S","M","T","W","T","F","S"].map((day,index)=><span key={`${day}-${index}`}>{day}</span>)}</div>
+              <div className="mt-2 grid grid-cols-7 gap-1">{monthKeys.map((key)=>{const dayEvents=upcomingByDay.get(key)??[];const active=dayEvents.length>0;const inMonth=key.slice(0,7)===todayKey.slice(0,7);const dateNumber=Number(key.slice(8,10));const eventNames=dayEvents.map(event=>event.name).join(", ");return active?<Link aria-label={`${key}: ${eventNames}`} className={cn("relative grid aspect-square place-items-center rounded-md bg-emerald-600 text-xs font-black text-white shadow-sm transition hover:bg-emerald-700",key===todayKey&&"ring-2 ring-emerald-700 ring-offset-1")} href={eventHref(dayEvents[0])} key={key} title={eventNames}>{dateNumber}{dayEvents.length>1&&<span className="absolute right-0.5 top-0.5 grid size-3.5 place-items-center rounded-full bg-white text-[8px] text-emerald-800">{dayEvents.length}</span>}</Link>:<span className={cn("grid aspect-square place-items-center rounded-md text-xs",!inMonth&&"text-muted-foreground/35",key===todayKey&&"bg-primary/10 font-bold text-primary ring-1 ring-primary/40")} key={key}>{dateNumber}</span>})}</div>
+            </div>
+            {!scheduledUpcomingEvents.length&&<p className="mt-3 text-center text-sm text-muted-foreground">Ready events will appear on this calendar.</p>}
           </CardContent>
         </Card>
       </div>
-
-      <Card className="border-0">
-        <CardHeader><CardTitle className="flex items-center gap-2"><Activity className="size-5 text-primary" />Recent activity</CardTitle><p className="text-sm text-muted-foreground">Latest event lifecycle changes across your programmes.</p></CardHeader>
-        <CardContent>
-          {activityError && <DashboardError>Recent activity could not be loaded: {activityError}</DashboardError>}
-          {!activityError && !activity.length && <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">Stage changes will appear here.</p>}
-          <div className="divide-y">
-            {activity.map((item) => <Link className="flex flex-col justify-between gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center" href={`/coordinator/events/${item.eventId}/lifecycle`} key={item.id}><div><p className="font-semibold">{item.eventName}</p><p className="mt-0.5 text-sm text-muted-foreground">{item.previousStatus ? `${stageName(item.previousStatus)} → ` : ""}{stageName(item.newStatus)} · {item.reason || "Stage updated"}</p></div><time className="shrink-0 text-xs text-muted-foreground" dateTime={item.changedAt}>{formatEventDate(item.changedAt)}</time></Link>)}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

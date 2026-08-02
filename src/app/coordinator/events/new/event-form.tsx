@@ -23,6 +23,10 @@ function FieldError({ errors }: { errors?: string[] }) {
   return <span className="mt-1 block text-xs font-medium text-destructive">{errors[0]}</span>;
 }
 
+function FormSectionHeader({ step, title, description }: { step:number; title:string; description:string }) {
+  return <div className="flex items-start gap-3 rounded-xl border border-primary/15 bg-gradient-to-r from-primary/15 via-accent to-transparent p-4 sm:col-span-2"><span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-sm font-black text-primary-foreground">{step}</span><div><h2 className="font-black">{title}</h2><p className="mt-1 text-sm text-muted-foreground">{description}</p></div></div>;
+}
+
 export function EventForm({ courses, organisations }: { courses: CourseOption[]; organisations: EventOrganisationOption[] }) {
   const [state, formAction, pending] = useActionState(createEvent, initialState);
   const [eventName, setEventName] = useState("");
@@ -37,6 +41,7 @@ export function EventForm({ courses, organisations }: { courses: CourseOption[];
 
   return (
     <form action={formAction} className="grid gap-5 sm:grid-cols-2">
+      <FormSectionHeader step={1} title="Event identity" description="Name the event and select the service programme that best describes it." />
       <label className="text-sm font-semibold">
         Event name
         <input
@@ -64,6 +69,7 @@ export function EventForm({ courses, organisations }: { courses: CourseOption[];
         </select>
         <FieldError errors={state.fieldErrors?.eventType} />
       </label>
+      <FormSectionHeader step={2} title="Programme and AI matching" description="Choose the course outcome and preview the volunteers and partners that fit." />
       <label className="text-sm font-semibold sm:col-span-2">
         Course or programme
         <select className={inputClassName} defaultValue="" disabled={!eventType} key={eventType} name="courseId" required>
@@ -128,11 +134,13 @@ export function EventForm({ courses, organisations }: { courses: CourseOption[];
           </div>
         )}
       </section>
+      <FormSectionHeader step={3} title="Delivery details" description="Set when and where the event takes place and who it serves." />
       <label className="text-sm font-semibold">
         Date and time <span className="font-normal text-muted-foreground">(SGT)</span>
         <input className={inputClassName} name="startsAt" required type="datetime-local" />
         <FieldError errors={state.fieldErrors?.startsAt} />
       </label>
+      <FormSectionHeader step={4} title="Targets and event brief" description="Set practical outreach targets and add details used in invitations and matching." />
       <label className="text-sm font-semibold">
         Venue
         <input className={inputClassName} name="venue" placeholder="Enter venue" required />
@@ -150,18 +158,13 @@ export function EventForm({ courses, organisations }: { courses: CourseOption[];
       </label>
       <label className="text-sm font-semibold">
         Volunteer target
-        <input className={inputClassName} defaultValue="20" min="0" name="volunteerTarget" required type="number" />
+        <input className={inputClassName} defaultValue="2" min="0" name="volunteerTarget" required type="number" />
         <FieldError errors={state.fieldErrors?.volunteerTarget} />
       </label>
       <label className="text-sm font-semibold">
         Business target
         <input className={inputClassName} defaultValue="2" min="0" name="businessTarget" required type="number" />
         <FieldError errors={state.fieldErrors?.businessTarget} />
-      </label>
-      <label className="text-sm font-semibold sm:col-span-2">
-        Participant capacity
-        <input className={inputClassName} min="1" name="participantCapacity" placeholder="Optional" type="number" />
-        <FieldError errors={state.fieldErrors?.participantCapacity} />
       </label>
       <label className="text-sm font-semibold sm:col-span-2">
         Description

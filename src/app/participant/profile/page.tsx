@@ -3,6 +3,7 @@ import { CalendarCheck, CheckCircle2, Download, QrCode, UserRound } from "lucide
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
 import { getTranslations, formatDate } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -68,14 +69,8 @@ export default async function ParticipantProfilePage() {
   );
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8">
-      <div>
-        <span className="inline-grid size-11 place-items-center rounded-xl bg-primary text-primary-foreground">
-          <UserRound className="size-5" />
-        </span>
-        <h1 className="mt-4 text-2xl font-bold sm:text-3xl">{t.profile.title}</h1>
-        <p className="mt-2 text-muted-foreground">{t.profile.subtitle}</p>
-      </div>
+    <div className="mx-auto max-w-6xl space-y-6 sm:space-y-7">
+      <PageHeader eyebrow={<span className="inline-flex items-center gap-2"><UserRound className="size-4" />Participant account</span>} title={t.profile.title} description={t.profile.subtitle} />
       <div className="grid gap-4 sm:grid-cols-3">
         {[
           { Icon: CalendarCheck, label: t.profile.upcomingRegistrations, value: upcomingCount ?? 0 },
@@ -85,7 +80,7 @@ export default async function ParticipantProfilePage() {
           <Card className="border-0" key={label}>
             <CardContent className="p-5">
               <Icon className="size-5 text-primary" />
-              <p className="mt-3 text-sm text-muted-foreground">{label}</p>
+              <p className="mt-3 text-sm font-bold text-foreground">{label}</p>
               <p className="mt-1 text-2xl font-bold">{value}</p>
             </CardContent>
           </Card>
@@ -93,10 +88,10 @@ export default async function ParticipantProfilePage() {
       </div>
       <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
         <Card className="border-0">
-          <CardHeader>
-            <CardTitle>{t.profile.personalDetails}</CardTitle>
+          <CardHeader className="rounded-t-xl bg-accent/70">
+            <CardTitle className="text-xl font-black">{t.profile.personalDetails}</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             <ProfileForm
               profile={{
                 fullName: dbProfile.full_name,
@@ -111,9 +106,9 @@ export default async function ParticipantProfilePage() {
             />
           </CardContent>
         </Card>
-        <Card className="h-fit border-0 bg-accent">
-          <CardContent className="p-6">
-            <h2 className="font-bold">{t.profile.yourOrganisation}</h2>
+        <Card className="h-fit border-0">
+          <CardHeader className="rounded-t-xl bg-accent/70"><CardTitle className="text-xl font-black">{t.profile.yourOrganisation}</CardTitle></CardHeader>
+          <CardContent className="pt-6">
             <p className="mt-2 text-sm text-muted-foreground">
               {organisation?.name ?? t.profile.notLinked}
             </p>
@@ -124,10 +119,10 @@ export default async function ParticipantProfilePage() {
         </Card>
       </div>
       <Card className="border-0">
-        <CardHeader>
-          <CardTitle>{t.profile.attendanceConfirmations}</CardTitle>
+        <CardHeader className="rounded-t-xl bg-accent/70">
+          <CardTitle className="text-xl font-black">{t.profile.attendanceConfirmations}</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {recentAttendance?.length ? (
             <div className="space-y-3">
               {recentAttendance.map((record) => {
@@ -157,10 +152,10 @@ export default async function ParticipantProfilePage() {
         </CardContent>
       </Card>
       <Card className="border-0">
-        <CardHeader>
-          <CardTitle>{t.profile.certificates}</CardTitle>
+        <CardHeader className="rounded-t-xl bg-accent/70">
+          <CardTitle className="text-xl font-black">{t.profile.certificates}</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {certificateLinks.length ? (
             <div className="space-y-3">
               {certificateLinks.map((certificate) => {

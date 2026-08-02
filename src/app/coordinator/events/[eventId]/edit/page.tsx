@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, Info } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
 import { isoToSingaporeLocal } from "@/lib/events/datetime";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -28,7 +29,7 @@ export default async function EditEventPage({ params }: { params: Promise<{ even
   if (event.status !== "ongoing") redirect(`/coordinator/events/${event.id}/lifecycle`);
 
   return <div className="mx-auto max-w-5xl space-y-7">
-    <div><Link className="inline-flex items-center gap-2 text-sm font-semibold text-primary" href={`/coordinator/events/${event.id}/operations`}><ArrowLeft className="size-4"/>Back to event operations</Link><h1 className="mt-5 text-2xl font-bold tracking-tight sm:text-3xl">Edit event requirements</h1><p className="mt-2 text-muted-foreground">Update the operational details and targets for {event.name}.</p></div>
+    <div className="space-y-4"><Link className="inline-flex items-center gap-2 text-sm font-semibold text-primary" href={`/coordinator/events/${event.id}/operations`}><ArrowLeft className="size-4"/>Back to event operations</Link><PageHeader eyebrow="Ongoing event" title="Edit event requirements" description={`Update the operational details and targets for ${event.name}.`} /></div>
     <div className="grid gap-6 lg:grid-cols-[1fr_300px]"><Card className="border-0"><CardHeader><CardTitle>Event details</CardTitle><CardDescription>Changes appear across the dashboard, outreach messages, participant views, and readiness checks.</CardDescription></CardHeader><CardContent><EditEventForm courses={courses} event={{id:event.id,name:event.name,eventType:event.event_type,description:event.description,startsAt:isoToSingaporeLocal(event.starts_at),venue:event.venue,organisationId:event.organisation_id,volunteerTarget:event.volunteer_target,businessTarget:event.business_target,participantCapacity:event.participant_capacity,courseId:event.course_id}} organisations={organisations}/></CardContent></Card>
       <Card className="h-fit border-primary/20 bg-accent shadow-none"><CardContent className="p-6"><Info className="size-6 text-primary"/><h2 className="mt-4 font-bold">Readiness review</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">Saving changes resets the participant-list review. Existing partner and volunteer selections remain available, while recommendations refresh from the updated event name and type.</p></CardContent></Card>
     </div>

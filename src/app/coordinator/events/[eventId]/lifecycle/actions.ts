@@ -114,7 +114,7 @@ export async function markVolunteerAttendance(formData: FormData) {
 
 const closureSchema = z.object({
   eventId: z.string().uuid(), beneficiaryReach: z.coerce.number().int().min(0), outcomes: z.string().trim().min(3),
-  feedbackSummary: z.string().trim().min(3), impactSummary: z.string().trim().min(3), publicityLinks: z.string().trim().optional(),
+  feedbackSummary: z.string().trim().min(3),
 });
 
 export async function saveClosureReport(_state: LifecycleActionState, formData: FormData): Promise<LifecycleActionState> {
@@ -131,8 +131,8 @@ export async function saveClosureReport(_state: LifecycleActionState, formData: 
       event_id: parsed.data.eventId, participant_attendance: participantAttendance ?? 0,
       volunteer_attendance: volunteerAttendance ?? 0, business_participation: businessParticipation ?? 0,
       beneficiary_reach: parsed.data.beneficiaryReach, outcomes: parsed.data.outcomes,
-      feedback_summary: parsed.data.feedbackSummary, impact_summary: parsed.data.impactSummary,
-      publicity_links: parsed.data.publicityLinks || null, submitted_by: user.id, submitted_at: new Date().toISOString(),
+      feedback_summary: parsed.data.feedbackSummary, impact_summary: parsed.data.outcomes,
+      submitted_by: user.id, submitted_at: new Date().toISOString(),
     });
     if (error) return { error: "The closure report could not be saved." };
     revalidatePath(`/coordinator/events/${parsed.data.eventId}/lifecycle`);
@@ -183,7 +183,7 @@ export async function getClosureConceptsAction(eventId: string): Promise<Concept
 
       const { data: closure } = await admin
         .from("event_closure_reports")
-        .select("impact_summary")
+        .select("outcomes")
         .eq("event_id", id.data)
         .maybeSingle();
 
@@ -194,7 +194,7 @@ export async function getClosureConceptsAction(eventId: string): Promise<Concept
         beneficiaryName: org?.name ?? "Community",
         volunteersAttended: volunteersAttended ?? 0,
         participantsAttended: participantsAttended ?? 0,
-        keyImpactMetric: closure?.impact_summary ?? "Community engagement and support",
+        keyImpactMetric: closure?.outcomes ?? "Community engagement and support",
       };
     })();
 

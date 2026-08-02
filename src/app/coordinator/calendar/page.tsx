@@ -1,4 +1,5 @@
 import { CoordinatorCalendar } from "@/components/coordinator/coordinator-calendar";
+import { PageHeader } from "@/components/page-header";
 import { dateKeyInSingapore } from "@/lib/events/calendar";
 import { listCoordinatorCalendarEvents } from "@/server/events/calendar";
 
@@ -7,11 +8,7 @@ export default async function CoordinatorCalendarPage() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      <div>
-        <p className="text-sm font-semibold text-primary">Coordinator event pipeline</p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">Calendar</h1>
-        <p className="mt-2 text-muted-foreground">Plan delivery dates and spot events that still need attention.</p>
-      </div>
+      <PageHeader eyebrow="Coordinator event pipeline" title="Calendar" description="Plan delivery dates and spot events that still need attention." />
       {error ? (
         <p className="rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive" role="alert">
           Calendar events could not be loaded: {error}

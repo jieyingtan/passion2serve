@@ -25,10 +25,6 @@ const eventSchema = z.object({
   courseId: z.string().uuid("Select a course or programme."),
   volunteerTarget: z.coerce.number().int().min(0).max(10000),
   businessTarget: z.coerce.number().int().min(0).max(1000),
-  participantCapacity: z.preprocess(
-    (value) => (value === "" || value === null ? undefined : value),
-    z.coerce.number().int().positive().max(100000).optional(),
-  ),
   description: z.string().trim().max(3000).optional(),
   intent: z.enum(["draft", "start"]),
 });
@@ -50,7 +46,6 @@ export async function createEvent(
     courseId: formData.get("courseId"),
     volunteerTarget: formData.get("volunteerTarget"),
     businessTarget: formData.get("businessTarget"),
-    participantCapacity: formData.get("participantCapacity"),
     description: formData.get("description"),
     intent: formData.get("intent"),
   });
@@ -96,7 +91,7 @@ export async function createEvent(
     event_venue: parsed.data.venue,
     target_volunteer_count: parsed.data.volunteerTarget,
     target_business_count: parsed.data.businessTarget,
-    target_participant_capacity: parsed.data.participantCapacity ?? null,
+    target_participant_capacity: null,
     initial_status: parsed.data.intent === "draft" ? "create" : "ongoing",
   });
 

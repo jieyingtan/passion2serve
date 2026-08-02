@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 
 import { AnalyticsFilters } from '@/components/coordinator/analytics/analytics-filters'
+import { PageHeader } from '@/components/page-header'
 import { AttendanceTrendChart } from '@/components/coordinator/analytics/attendance-trend-chart'
 import { BeneficiaryImpactTable } from '@/components/coordinator/analytics/beneficiary-impact-table'
 import { CompletionTrendsChart } from '@/components/coordinator/analytics/completion-trends-chart'
@@ -58,13 +59,7 @@ export default async function AnalyticsPage({ searchParams }: PageProps) {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Impact analytics</h1>
-        <p className="text-sm text-muted-foreground">
-          Archived events from {formatDate(filters.from)} to {formatDate(filters.to)} ·{' '}
-          {loadError ? 'Analytics data unavailable.' : describeImpact(analytics)}
-        </p>
-      </header>
+      <PageHeader eyebrow="Archived event reporting" title="Impact analytics" description={<>Archived events from {formatDate(filters.from)} to {formatDate(filters.to)} · {loadError ? 'Analytics data unavailable.' : describeImpact(analytics)}</>} />
 
       <AnalyticsFilters filters={filters} options={options} />
 

@@ -1,98 +1,23 @@
 "use client";
 
 import type { BrowserQRCodeReader, IScannerControls } from "@zxing/browser";
-import { Camera, ImagePlus, ScanLine } from "lucide-react";
+import { Camera, ScanLine } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-import { Button, buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 function cameraErrorMessage(error: unknown) {
-  if (!(error instanceof DOMException)) return "The camera could not start. Try taking a QR photo instead.";
+  if (!(error instanceof DOMException)) return "The camera could not start. Check browser camera access and try again.";
   if (error.name === "NotAllowedError") return "Camera access was blocked. Allow Camera access for this site in Safari settings, then try again.";
-  if (["NotFoundError", "OverconstrainedError"].includes(error.name)) return "A rear camera could not be selected. Try taking a QR photo instead.";
+  if (["NotFoundError", "OverconstrainedError"].includes(error.name)) return "A rear camera could not be selected on this device.";
   if (error.name === "NotReadableError") return "The camera is being used by another app. Close it there and try again.";
-  return "The camera could not start. Try taking a QR photo instead.";
-}
-
-function loadPhoto(url: string) {
-  return new Promise<HTMLImageElement>((resolve, reject) => {
-    const image = new Image();
-    image.decoding = "async";
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("The selected image could not be opened."));
-    image.src = url;
-  });
-}
-
-function renderPhotoCanvas(image: HTMLImageElement, cropRatio = 1, focusX = 0.5, focusY = 0.5) {
-  const sourceWidth = image.naturalWidth;
-  const sourceHeight = image.naturalHeight;
-  const cropWidth = Math.max(1, Math.round(sourceWidth * cropRatio));
-  const cropHeight = Math.max(1, Math.round(sourceHeight * cropRatio));
-  const sourceX = Math.max(0, Math.min(sourceWidth - cropWidth, Math.round(sourceWidth * focusX - cropWidth / 2)));
-  const sourceY = Math.max(0, Math.min(sourceHeight - cropHeight, Math.round(sourceHeight * focusY - cropHeight / 2)));
-  const maximumSide = 1600;
-  const scale = Math.min(1, maximumSide / Math.max(cropWidth, cropHeight));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(cropWidth * scale));
-  canvas.height = Math.max(1, Math.round(cropHeight * scale));
-  let context: CanvasRenderingContext2D | null;
-  try {
-    context = canvas.getContext("2d", { willReadFrequently: true });
-  } catch {
-    // Older iOS Safari versions do not accept the context settings object.
-    context = canvas.getContext("2d");
-  }
-  if (!context) throw new Error("Photo processing is unavailable in this browser.");
-  context.fillStyle = "#ffffff";
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  context.imageSmoothingEnabled = true;
-  context.imageSmoothingQuality = "high";
-  context.drawImage(image, sourceX, sourceY, cropWidth, cropHeight, 0, 0, canvas.width, canvas.height);
-  return canvas;
-}
-
-async function decodeQrPhoto(reader: BrowserQRCodeReader, file: File) {
-  const url = URL.createObjectURL(file);
-  try {
-    const image = await loadPhoto(url);
-    // A full-frame attempt preserves QRs near an edge. Tighter centre crops make a
-    // photographed wallet QR large enough for ZXing without allocating a huge
-    // iPhone camera canvas, which can fail silently on memory-constrained Safari.
-    const attempts = [
-      [1, 0.5, 0.5],
-      [0.82, 0.5, 0.5],
-      [0.64, 0.5, 0.5],
-      [0.64, 0.32, 0.32],
-      [0.64, 0.68, 0.32],
-      [0.64, 0.32, 0.68],
-      [0.64, 0.68, 0.68],
-    ] as const;
-    for (const [cropRatio, focusX, focusY] of attempts) {
-      const canvas = renderPhotoCanvas(image, cropRatio, focusX, focusY);
-      try {
-        return reader.decodeFromCanvas(canvas).getText();
-      } catch {
-        // Try the next crop before reporting that the image has no readable QR.
-      } finally {
-        // Release the backing pixel buffer promptly on memory-constrained iOS.
-        canvas.width = 1;
-        canvas.height = 1;
-      }
-    }
-    throw new Error("No QR code was found.");
-  } finally {
-    URL.revokeObjectURL(url);
-  }
+  return "The camera could not start. Check browser camera access and try again.";
 }
 
 export function AttendanceScanner({ eventId }: { eventId: string }) {
   const router = useRouter();
-  const photoInputId = useId();
   const videoRef = useRef<HTMLVideoElement>(null);
-  const photoInputRef = useRef<HTMLInputElement>(null);
   const controlsRef = useRef<IScannerControls | null>(null);
   const readerRef = useRef<BrowserQRCodeReader | null>(null);
   const acceptingScanRef = useRef(false);
@@ -168,7 +93,7 @@ export function AttendanceScanner({ eventId }: { eventId: string }) {
 
   async function startCamera() {
     if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
-      setMessage("Camera scanning requires an HTTPS address on iPhone or iPad. Open the deployed Vercel site, or use Take QR photo.");
+      setMessage("Camera scanning requires an HTTPS address on iPhone or iPad. Open the deployed Vercel site and allow camera access.");
       return;
     }
 
@@ -234,39 +159,6 @@ export function AttendanceScanner({ eventId }: { eventId: string }) {
     }
   }
 
-  async function scanPhoto(file: File | undefined) {
-    if (!file) return;
-    if (file.type && !file.type.startsWith("image/")) {
-      setMessage("Choose a photo containing the membership QR code.");
-      return;
-    }
-    setMessage("Reading QR photo…");
-    try {
-      const [{ BrowserQRCodeReader }, { BarcodeFormat, DecodeHintType }] = await Promise.all([
-        import("@zxing/browser"),
-        import("@zxing/library"),
-      ]);
-      const hints = new Map();
-      hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE]);
-      hints.set(DecodeHintType.TRY_HARDER, true);
-      hints.set(DecodeHintType.CHARACTER_SET, "UTF-8");
-      const reader = readerRef.current ?? new BrowserQRCodeReader(hints);
-      readerRef.current = reader;
-      const value = await decodeQrPhoto(reader, file);
-      setToken(value);
-      await submitToken(value);
-    } catch (error) {
-      const unsupportedPhoto = error instanceof Error && error.message.includes("could not be opened");
-      setMessage(
-        unsupportedPhoto
-          ? "That photo format could not be opened. In Camera settings, choose Most Compatible, then take a new photo."
-          : "No QR code was found in that photo. Fill most of the frame with the QR, avoid glare, and try again.",
-      );
-    } finally {
-      if (photoInputRef.current) photoInputRef.current.value = "";
-    }
-  }
-
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-primary/20 bg-accent/50 p-4">
@@ -300,22 +192,6 @@ export function AttendanceScanner({ eventId }: { eventId: string }) {
         <Button disabled={pending} onClick={cameraActive ? stopCamera : () => void startCamera()} type="button" variant="outline">
           <Camera className="size-4" />{cameraActive ? "Stop camera" : "Scan with camera"}
         </Button>
-        <label
-          aria-disabled={pending}
-          className={cn(buttonVariants({ variant: "outline" }), pending && "pointer-events-none opacity-50")}
-          htmlFor={photoInputId}
-        >
-          <ImagePlus className="size-4" />Take QR photo
-          <input
-            accept="image/*"
-            capture="environment"
-            className="sr-only"
-            id={photoInputId}
-            onChange={(event) => void scanPhoto(event.target.files?.[0])}
-            ref={photoInputRef}
-            type="file"
-          />
-        </label>
       </div>
 
       <div className={cameraActive ? "relative max-w-xl overflow-hidden rounded-xl bg-black" : "hidden"}>
