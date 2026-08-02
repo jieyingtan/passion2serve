@@ -77,6 +77,10 @@
   .testimonial-track:hover {
     animation-play-state: paused;
   }
+
+  .testimonial-track:focus-within {
+    animation-play-state: paused;
+  }
 }
 
 @keyframes testimonial-scroll {
@@ -86,4 +90,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .testimonial-track { animation: none; }
+  .testimonial-viewport { overflow-x: auto; }
+  .testimonial-duplicate { display: none; }
 }

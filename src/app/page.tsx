@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { ArrowRight, CalendarCheck, HeartHandshake, Quote, Sparkles, Star, UsersRound } from "lucide-react";
+import { ArrowRight, CalendarCheck, HeartHandshake, Sparkles, UsersRound } from "lucide-react";
 
 import { Brand } from "@/components/brand";
+import { TestimonialsCarousel } from "@/components/testimonials-carousel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { isSupabaseConfigured } from "@/lib/config";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getTestimonials } from "@/server/testimonials";
 
 const roles = [
   {
@@ -24,15 +24,8 @@ const roles = [
   },
 ];
 
-async function testimonials() {
-  if (!isSupabaseConfigured() || !process.env.SUPABASE_SERVICE_ROLE_KEY) return [];
-  const {data}=await createAdminClient().from("participant_feedback").select("id,rating,feedback,personal_story,profiles(full_name),events(name)").eq("story_consent",true).order("updated_at",{ascending:false}).limit(8);
-  return (data??[]).map(item=>{const profile=Array.isArray(item.profiles)?item.profiles[0]:item.profiles;const event=Array.isArray(item.events)?item.events[0]:item.events;const parts=(profile?.full_name??"Community member").trim().split(/\s+/);return {id:item.id,rating:item.rating,story:item.personal_story?.trim()||item.feedback,name:parts.length>1?`${parts[0]} ${parts.at(-1)?.[0]}.`:parts[0],event:event?.name??"Passion2Serve event"};}).filter(item=>item.story.length>0);
-}
-
 export default async function HomePage() {
-  const liveTestimonials=await testimonials();
-  const stories=liveTestimonials.length?liveTestimonials:[{id:"demo-1",rating:5,story:"I felt confident using digital services on my own for the first time.",name:"Community participant",event:"Digital Skills Workshop"},{id:"demo-2",rating:5,story:"The volunteers were patient, welcoming, and made learning enjoyable.",name:"Programme participant",event:"Knowledge to Serve"},{id:"demo-3",rating:5,story:"I met new friends and discovered the next programme I can join.",name:"Community member",event:"Wellness Together"}];
+  const testimonials = await getTestimonials();
   return (
     <main className="relative min-h-screen overflow-hidden px-5 py-6 sm:px-8">
       <div className="absolute -right-32 -top-32 size-96 rounded-full bg-secondary/70 blur-3xl" />
@@ -92,6 +85,8 @@ export default async function HomePage() {
           </div>
         </section>
 
+        {testimonials.length > 0 && <TestimonialsCarousel testimonials={testimonials} />}
+
         <section className="grid gap-5 pb-20 md:grid-cols-2">
           {roles.map((role) => {
             const Icon = role.icon;
@@ -111,7 +106,6 @@ export default async function HomePage() {
             );
           })}
         </section>
-        <section className="pb-24" aria-labelledby="community-stories"><div className="mb-7 text-center"><p className="text-sm font-bold uppercase tracking-[0.18em] text-primary">Real community voices</p><h2 className="mt-2 text-3xl font-bold" id="community-stories">What participants are saying</h2><p className="mt-2 text-muted-foreground">Stories appear here only when participants choose to share them.</p></div><div className="overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)]"><div className="testimonial-track flex w-max gap-4 py-2">{[...stories,...stories].map((story,index)=><Card className="w-[300px] shrink-0 border-0 sm:w-[380px]" key={`${story.id}-${index}`}><CardContent className="p-6"><div className="flex items-center justify-between"><Quote className="size-7 text-primary"/><div className="flex">{Array.from({length:story.rating},(_,star)=><Star className="size-4 fill-amber-400 text-amber-400" key={star}/>)}</div></div><blockquote className="mt-5 text-lg font-semibold leading-7">“{story.story}”</blockquote><p className="mt-5 text-sm font-bold">{story.name}</p><p className="text-xs text-muted-foreground">{story.event}</p></CardContent></Card>)}</div></div></section>
       </div>
     </main>
   );
